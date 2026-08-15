@@ -1,0 +1,190 @@
+{
+  "_provenance": {
+    "simulated": true,
+    "authored": "2026-08-14",
+    "basis": "Frozen agreement terms for fixtures/documents/csa_meridian_2026.md, as they exist after Legal-Clause Agent extraction and reviewer confirmation.",
+    "warning": "SIMULATED DATA - not a real agreement.",
+    "note": "In the live pipeline this file is produced by freezing a confirmed terms version. It is committed so Phases 2-4 can run before the Legal-Clause Agent exists in Phase 5."
+  },
+  "agreement_id": "CSA-MERIDIAN-2026",
+  "document_id": "CSA-MERIDIAN-2026",
+  "netting_set_id": "NS-MERIDIAN-001",
+  "terms_version": 1,
+  "csa_type": "2016_ISDA_VM_CSA",
+  "governing_law": "English law",
+  "status": "FROZEN",
+  "_review_record": {
+    "note": "The one field that could not be resolved from the document alone.",
+    "reviewer": "collateral.ops@aether.example",
+    "confirmed_at": "2026-08-14",
+    "decisions": [
+      {
+        "field": "threshold.party_b",
+        "question": "Paragraph 11(b)(iii)(A) states USD 5,000,000 'subject to Paragraph 11(g)(ii)', which drops the Threshold to zero while a Ratings Event is continuing. The document cannot tell us Party B's current rating.",
+        "reviewer_decision": "NO_RATINGS_EVENT",
+        "rationale": "Party B is rated AA- (S&P) as at the valuation date, comfortably above the A- trigger. The stated USD 5,000,000 Threshold applies.",
+        "value_applied": {
+          "amount": "5000000.00",
+          "currency": "USD"
+        },
+        "alternative_if_triggered": {
+          "amount": "0.00",
+          "currency": "USD"
+        }
+      }
+    ]
+  },
+  "base_currency": "USD",
+  "eligible_currencies": [
+    "USD",
+    "EUR",
+    "INR"
+  ],
+  "party_a": {
+    "party": "PARTY_A",
+    "legal_name": "AETHER Capital Markets (IFSC) Limited",
+    "threshold": {
+      "amount": "10000000.00",
+      "currency": "USD"
+    },
+    "minimum_transfer_amount": {
+      "amount": "500000.00",
+      "currency": "USD"
+    },
+    "independent_amount": {
+      "amount": "0.00",
+      "currency": "USD"
+    }
+  },
+  "party_b": {
+    "party": "PARTY_B",
+    "legal_name": "Meridian Global Markets plc",
+    "threshold": {
+      "amount": "5000000.00",
+      "currency": "USD"
+    },
+    "minimum_transfer_amount": {
+      "amount": "500000.00",
+      "currency": "USD"
+    },
+    "independent_amount": {
+      "amount": "2000000.00",
+      "currency": "USD"
+    }
+  },
+  "rounding": {
+    "increment": {
+      "amount": "100000.00",
+      "currency": "USD"
+    },
+    "delivery_direction": "UP",
+    "return_direction": "DOWN"
+  },
+  "mta_before_rounding": true,
+  "fx_haircut_pct": "0.08",
+  "excluded_issuers": [
+    "MERIDIAN_GLOBAL"
+  ],
+  "_excluded_issuers_note": "Wrong-way risk under Paragraph 11(g)(iv). Party B's own paper may never be posted to Party B.",
+  "eligible_collateral": [
+    {
+      "ref": "A",
+      "asset_class": "CASH",
+      "issuer_type": "CASH",
+      "currency": "USD",
+      "valuation_percentage": "1.000"
+    },
+    {
+      "ref": "B",
+      "asset_class": "CASH",
+      "issuer_type": "CASH",
+      "non_base_currency_only": true,
+      "valuation_percentage": "1.000"
+    },
+    {
+      "ref": "C",
+      "asset_class": "SOVEREIGN_BOND",
+      "issuer_type": "SOVEREIGN",
+      "issuer": "US_TREASURY",
+      "max_maturity_years": "1",
+      "valuation_percentage": "0.995"
+    },
+    {
+      "ref": "D",
+      "asset_class": "SOVEREIGN_BOND",
+      "issuer_type": "SOVEREIGN",
+      "issuer": "US_TREASURY",
+      "min_maturity_years": "1",
+      "max_maturity_years": "5",
+      "valuation_percentage": "0.980"
+    },
+    {
+      "ref": "E",
+      "asset_class": "SOVEREIGN_BOND",
+      "issuer_type": "SOVEREIGN",
+      "issuer": "US_TREASURY",
+      "min_maturity_years": "5",
+      "max_maturity_years": "10",
+      "valuation_percentage": "0.960"
+    },
+    {
+      "ref": "F",
+      "asset_class": "SOVEREIGN_BOND",
+      "issuer_type": "SOVEREIGN",
+      "issuer": "GERMANY",
+      "max_maturity_years": "10",
+      "valuation_percentage": "0.970"
+    },
+    {
+      "ref": "G",
+      "asset_class": "SOVEREIGN_BOND",
+      "issuer_type": "SOVEREIGN",
+      "issuer": "INDIA",
+      "max_maturity_years": "10",
+      "valuation_percentage": "0.940"
+    },
+    {
+      "ref": "H",
+      "asset_class": "CORPORATE_BOND",
+      "issuer_type": "CORPORATE",
+      "min_rating": "AA-",
+      "max_maturity_years": "5",
+      "valuation_percentage": "0.920"
+    },
+    {
+      "ref": "I",
+      "asset_class": "EQUITY",
+      "issuer_type": "CORPORATE",
+      "index_membership": [
+        "SPX",
+        "SX5E",
+        "NIFTY50"
+      ],
+      "valuation_percentage": "0.850"
+    },
+    {
+      "ref": "J",
+      "asset_class": "GOLD",
+      "issuer_type": "NONE",
+      "valuation_percentage": "0.880"
+    }
+  ],
+  "concentration_limits": [
+    {
+      "scope": "SINGLE_NON_SOVEREIGN_ISSUER",
+      "limit_percentage": "0.25"
+    },
+    {
+      "scope": "CORPORATE_BOND",
+      "limit_percentage": "0.30"
+    },
+    {
+      "scope": "EQUITY",
+      "limit_percentage": "0.20"
+    },
+    {
+      "scope": "GOLD",
+      "limit_percentage": "0.15"
+    }
+  ]
+}

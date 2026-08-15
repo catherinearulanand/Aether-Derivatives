@@ -1,0 +1,104 @@
+[project]
+name = "aether"
+version = "0.1.0"
+description = "AETHER — Autonomous Margin & Collateral Intelligence"
+requires-python = ">=3.12"
+
+# Verified installable on Python 3.14.3 (Windows, AMD64) on 2026-08-14.
+# See scripts/verify_env.py — run it after changing anything here.
+dependencies = [
+    "numpy>=2.4.3",
+    "scipy>=1.18.0",          # HiGHS LP solver for collateral optimisation
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.13.1",
+    "fastapi>=0.141.1",
+    "uvicorn>=0.41.0",
+    "sqlmodel>=0.0.39",
+    "python-multipart>=0.0.32",
+    "anthropic>=0.122.0",     # live mode only
+    "pypdf>=6.16.1",          # native PDF text-layer ingestion
+    "truststore>=0.10.4",     # required on TLS-intercepted networks
+    "certifi>=2026.2.25",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.1.1",
+    "hypothesis>=6.165.7",
+    "httpx>=0.28.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+pythonpath = ["backend"]
+addopts = "-q --strict-markers"
+markers = [
+    "golden: reference cases with independently computed expected values",
+    "property: invariants over generated inputs",
+    "determinism: byte-identical reproducibility",
+    "slice: the full vertical slice, end to end - this is the demo path",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["backend"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "RUF", "PL"]
+ignore = [
+    "PLR0913",  # quantitative functions legitimately take many parameters
+    "PLR2004",  # magic numbers are the point in golden tests
+    "RUF001",   # en/em dashes are intentional in prose and docstrings
+]
+
+[tool.ruff.lint.pylint]
+# The margin calculation is a linear sequence that also builds its own audit trace.
+# Splitting it to satisfy a statement count would make it harder to follow, not easier.
+max-statements = 70
+# `_encode` in the audit chain dispatches on type: one return per supported type is
+# the clearest possible form, and collapsing it would only obscure the mapping.
+max-returns = 10
+# `_execute` in the orchestrator dispatches one branch per registered tool, each with
+# its own precondition guard. A dispatch table hides the guards; a longer match reads
+# straight down and is the reason the tool boundary is auditable.
+max-branches = 16
+
+[tool.ruff.lint.per-file-ignores]
+# PLC0415: test fixtures import lazily so a loader failure surfaces as a test
+# failure rather than a collection error.
+"backend/tests/*" = ["PLR2004", "N802", "N803", "PLC0415", "PLR0917"]
+# PLC0415: the environment gate imports inside try blocks on purpose — probing
+# whether a dependency is installed is the whole point of the script.
+"scripts/verify_env.py" = ["PLC0415"]
+# PLR0915: the headless runner is one long print of the whole pipeline. Splitting it
+# to satisfy a statement count would scatter a report that reads top to bottom.
+"scripts/run_pipeline.py" = ["PLR0915"]
+# PLC0415: both scripts probe for an optional dependency inside a try block and
+# degrade with a message rather than failing to import.
+"scripts/fetch_snapshot.py" = ["PLC0415"]
+"scripts/build_csa_pdf.py" = ["PLC0415"]
+# PLC0415: the API key is read lazily so it is never stored on the settings model,
+# and truststore is imported only where it is actually needed.
+"backend/aether/config.py" = ["PLC0415"]
+# PLC0415: the anthropic SDK is imported only on the live path and pypdf only on
+# the PDF path, so replay-from-markdown depends on neither.
+"backend/aether/agents/legal_clause.py" = ["PLC0415"]
+# N818: `except ReviewRequired` reads better than `except ReviewRequiredError`, and
+# the name states a condition rather than a malfunction.
+"backend/aether/agents/review.py" = ["N818"]
+# B008: calling Body()/Depends() in a default is the documented FastAPI idiom for
+# declaring request bodies, not an accidental mutable default.
+"backend/aether/api/main.py" = ["B008"]
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "backend"
+packages = ["aether"]
+strict = true
+warn_unreachable = true
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = ["scipy.*", "numpy.*"]
+ignore_missing_imports = true

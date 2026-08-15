@@ -1,0 +1,419 @@
+{
+  "_provenance": {
+    "simulated": true,
+    "authored": "2026-08-14",
+    "basis": "Hand-authored ground truth for fixtures/documents/csa_meridian_2026.md. Values read directly from the source document, not produced by any model.",
+    "purpose": "Scoring target for the Legal-Clause Agent extraction eval harness.",
+    "warning": "SIMULATED DATA - not real institutional data."
+  },
+  "_eval": {
+    "document_id": "CSA-MERIDIAN-2026",
+    "scored_fields": 21,
+    "scoring": {
+      "value_match": "Exact match on normalised value. Money compared as Decimal, not float.",
+      "citation_match": "Correct page AND the quoted span overlaps the expected span by >= 60% of its characters.",
+      "review_flag_match": "requires_review must match. Flagging a certain field wastes reviewer time; failing to flag an uncertain one is a correctness failure and is weighted 3x.",
+      "field_score": "0.5 * value_match + 0.3 * citation_match + 0.2 * review_flag_match"
+    },
+    "targets": {
+      "value_accuracy": 0.9,
+      "citation_accuracy": 0.8,
+      "review_flag_recall": 1.0
+    }
+  },
+  "document_id": "CSA-MERIDIAN-2026",
+  "csa_type": "2016_ISDA_VM_CSA",
+  "governing_law": "English law",
+  "netting_set_id": "NS-MERIDIAN-001",
+  "parties": {
+    "party_a": {
+      "legal_name": "AETHER Capital Markets (IFSC) Limited",
+      "jurisdiction": "India (GIFT IFSC)",
+      "role": "valuation_agent"
+    },
+    "party_b": {
+      "legal_name": "Meridian Global Markets plc",
+      "jurisdiction": "United Kingdom"
+    }
+  },
+  "fields": [
+    {
+      "path": "party_b.legal_name",
+      "value": "Meridian Global Markets plc",
+      "requires_review": false,
+      "citation": {
+        "page": 1,
+        "section": "Preamble",
+        "quote": "**MERIDIAN GLOBAL MARKETS PLC**, a company incorporated under the laws of England and Wales"
+      }
+    },
+    {
+      "path": "party_a.legal_name",
+      "value": "AETHER Capital Markets (IFSC) Limited",
+      "requires_review": false,
+      "citation": {
+        "page": 1,
+        "section": "Preamble",
+        "quote": "**AETHER CAPITAL MARKETS (IFSC) LIMITED**, an IFSC Banking Unit established under the laws of India and licensed by the International Financial Services Centres Authority"
+      }
+    },
+    {
+      "path": "base_currency",
+      "value": "USD",
+      "requires_review": false,
+      "citation": {
+        "page": 4,
+        "section": "11(a)(i)",
+        "quote": "\"Base Currency\" means United States Dollars (USD)."
+      }
+    },
+    {
+      "path": "eligible_currencies",
+      "value": [
+        "USD",
+        "EUR",
+        "INR"
+      ],
+      "requires_review": false,
+      "citation": {
+        "page": 4,
+        "section": "11(a)(ii)",
+        "quote": "\"Eligible Currency\" means the Base Currency, the Euro (EUR) and the Indian Rupee (INR)."
+      }
+    },
+    {
+      "path": "threshold.party_a",
+      "value": {
+        "amount": "10000000.00",
+        "currency": "USD"
+      },
+      "requires_review": false,
+      "citation": {
+        "page": 5,
+        "section": "11(b)(iii)(A)",
+        "quote": "Party A: USD 10,000,000."
+      }
+    },
+    {
+      "path": "threshold.party_b",
+      "value": {
+        "amount": "5000000.00",
+        "currency": "USD"
+      },
+      "requires_review": true,
+      "review_reason": "conditional_clause",
+      "review_note": "Threshold is stated as USD 5,000,000 but is overridden to zero while a Ratings Event under 11(g)(ii) is continuing. The agent cannot determine Party B's current rating from the document. A reviewer must confirm whether a Ratings Event is in effect before the agreement is frozen.",
+      "conditional": {
+        "trigger": "Ratings Event",
+        "condition": "Party B long-term senior unsecured rating below A- (S&P) or below A3 (Moody's)",
+        "value_if_triggered": {
+          "amount": "0.00",
+          "currency": "USD"
+        },
+        "trigger_citation": {
+          "page": 7,
+          "section": "11(g)(ii)",
+          "quote": "the Threshold with respect to Party B shall be zero"
+        }
+      },
+      "citation": {
+        "page": 5,
+        "section": "11(b)(iii)(A)",
+        "quote": "Party B: USD 5,000,000, subject to Paragraph 11(g)(ii)."
+      }
+    },
+    {
+      "path": "minimum_transfer_amount.party_a",
+      "value": {
+        "amount": "500000.00",
+        "currency": "USD"
+      },
+      "requires_review": false,
+      "citation": {
+        "page": 5,
+        "section": "11(b)(iii)(B)",
+        "quote": "\"Minimum Transfer Amount\" means, with respect to Party A and Party B, USD 500,000."
+      }
+    },
+    {
+      "path": "minimum_transfer_amount.party_b",
+      "value": {
+        "amount": "500000.00",
+        "currency": "USD"
+      },
+      "requires_review": false,
+      "citation": {
+        "page": 5,
+        "section": "11(b)(iii)(B)",
+        "quote": "\"Minimum Transfer Amount\" means, with respect to Party A and Party B, USD 500,000."
+      }
+    },
+    {
+      "path": "independent_amount.party_a",
+      "value": {
+        "amount": "0.00",
+        "currency": "USD"
+      },
+      "requires_review": false,
+      "citation": {
+        "page": 4,
+        "section": "11(b)(ii)",
+        "quote": "Party A: zero."
+      }
+    },
+    {
+      "path": "independent_amount.party_b",
+      "value": {
+        "amount": "2000000.00",
+        "currency": "USD"
+      },
+      "requires_review": false,
+      "citation": {
+        "page": 4,
+        "section": "11(b)(ii)",
+        "quote": "Party B: USD 2,000,000."
+      }
+    },
+    {
+      "path": "rounding.increment",
+      "value": {
+        "amount": "100000.00",
+        "currency": "USD"
+      },
+      "requires_review": false,
+      "citation": {
+        "page": 5,
+        "section": "11(b)(iii)(D)",
+        "quote": "in each case to the nearest integral multiple of USD 100,000."
+      }
+    },
+    {
+      "path": "rounding.delivery_direction",
+      "value": "UP",
+      "requires_review": false,
+      "citation": {
+        "page": 5,
+        "section": "11(b)(iii)(D)",
+        "quote": "The Delivery Amount will be rounded up"
+      }
+    },
+    {
+      "path": "rounding.return_direction",
+      "value": "DOWN",
+      "requires_review": false,
+      "citation": {
+        "page": 5,
+        "section": "11(b)(iii)(D)",
+        "quote": "the Return Amount will be rounded down"
+      }
+    },
+    {
+      "path": "mta_before_rounding",
+      "value": true,
+      "requires_review": false,
+      "note": "Explicitly resolved by this document. Many CSAs leave it ambiguous; the engine records which convention was applied either way.",
+      "citation": {
+        "page": 3,
+        "section": "3(b)",
+        "quote": "the Minimum Transfer Amount test in Paragraphs 2(a) and 2(b) is applied to the unrounded amount, and rounding is applied only after that test has been satisfied."
+      }
+    },
+    {
+      "path": "fx_haircut_pct",
+      "value": "0.08",
+      "requires_review": false,
+      "citation": {
+        "page": 6,
+        "section": "11(g)(i)",
+        "quote": "shall be further reduced by 8% (an \"FX Haircut\"), applied multiplicatively."
+      }
+    },
+    {
+      "path": "valuation_agent",
+      "value": "PARTY_A",
+      "requires_review": false,
+      "citation": {
+        "page": 5,
+        "section": "11(c)(i)",
+        "quote": "\"Valuation Agent\" means Party A"
+      }
+    },
+    {
+      "path": "valuation_time",
+      "value": "17:00 Asia/Kolkata",
+      "requires_review": false,
+      "citation": {
+        "page": 5,
+        "section": "11(c)(iii)",
+        "quote": "\"Valuation Time\" means 5:00 p.m., GIFT City time (IST)"
+      }
+    },
+    {
+      "path": "notification_time",
+      "value": "13:00 Europe/London",
+      "requires_review": false,
+      "citation": {
+        "page": 5,
+        "section": "11(c)(iv)",
+        "quote": "\"Notification Time\" means 1:00 p.m., London time, on a Local Business Day."
+      }
+    },
+    {
+      "path": "interest_rate.USD",
+      "value": {
+        "index": "SOFR",
+        "spread_bps": -10
+      },
+      "requires_review": false,
+      "citation": {
+        "page": 6,
+        "section": "11(e)(i)",
+        "quote": "in USD: the Secured Overnight Financing Rate (SOFR) minus 10 basis points"
+      }
+    },
+    {
+      "path": "eligible_collateral",
+      "value": [
+        {
+          "ref": "A",
+          "asset_class": "CASH",
+          "currency": "USD",
+          "valuation_pct": "1.000",
+          "issuer_type": "CASH"
+        },
+        {
+          "ref": "B",
+          "asset_class": "CASH",
+          "currency": "ANY_ELIGIBLE_NON_BASE",
+          "valuation_pct": "1.000",
+          "issuer_type": "CASH"
+        },
+        {
+          "ref": "C",
+          "asset_class": "SOVEREIGN_BOND",
+          "issuer": "US_TREASURY",
+          "max_maturity_years": 1,
+          "valuation_pct": "0.995",
+          "issuer_type": "SOVEREIGN"
+        },
+        {
+          "ref": "D",
+          "asset_class": "SOVEREIGN_BOND",
+          "issuer": "US_TREASURY",
+          "min_maturity_years": 1,
+          "max_maturity_years": 5,
+          "valuation_pct": "0.980",
+          "issuer_type": "SOVEREIGN"
+        },
+        {
+          "ref": "E",
+          "asset_class": "SOVEREIGN_BOND",
+          "issuer": "US_TREASURY",
+          "min_maturity_years": 5,
+          "max_maturity_years": 10,
+          "valuation_pct": "0.960",
+          "issuer_type": "SOVEREIGN"
+        },
+        {
+          "ref": "F",
+          "asset_class": "SOVEREIGN_BOND",
+          "issuer": "GERMANY",
+          "max_maturity_years": 10,
+          "valuation_pct": "0.970",
+          "issuer_type": "SOVEREIGN"
+        },
+        {
+          "ref": "G",
+          "asset_class": "SOVEREIGN_BOND",
+          "issuer": "INDIA",
+          "max_maturity_years": 10,
+          "valuation_pct": "0.940",
+          "issuer_type": "SOVEREIGN"
+        },
+        {
+          "ref": "H",
+          "asset_class": "CORPORATE_BOND",
+          "min_rating": "AA-",
+          "max_maturity_years": 5,
+          "valuation_pct": "0.920",
+          "issuer_type": "CORPORATE"
+        },
+        {
+          "ref": "I",
+          "asset_class": "EQUITY",
+          "index_member": [
+            "SPX",
+            "SX5E",
+            "NIFTY50"
+          ],
+          "valuation_pct": "0.850",
+          "issuer_type": "CORPORATE"
+        },
+        {
+          "ref": "J",
+          "asset_class": "GOLD",
+          "issuer_type": "NONE",
+          "valuation_pct": "0.880"
+        }
+      ],
+      "requires_review": false,
+      "citation": {
+        "page": 4,
+        "section": "11(b)(i)",
+        "quote": "The following items will qualify as \"Eligible Credit Support (VM)\" for the party specified"
+      }
+    },
+    {
+      "path": "concentration_limits",
+      "value": [
+        {
+          "scope": "SINGLE_NON_SOVEREIGN_ISSUER",
+          "limit_pct": "0.25"
+        },
+        {
+          "scope": "CORPORATE_BOND",
+          "limit_pct": "0.30"
+        },
+        {
+          "scope": "EQUITY",
+          "limit_pct": "0.20"
+        },
+        {
+          "scope": "GOLD",
+          "limit_pct": "0.15"
+        }
+      ],
+      "requires_review": false,
+      "citation": {
+        "page": 7,
+        "section": "11(g)(iii)",
+        "quote": "No item of Eligible Credit Support (VM) shall be included in the Credit Support Balance to the extent that its inclusion would cause"
+      }
+    }
+  ],
+  "_distractors": {
+    "note": "Values present in the document that a naive extractor may wrongly latch onto. The eval penalises these explicitly.",
+    "cases": [
+      {
+        "trap": "MIBOR minus 25 basis points (11(e)(i))",
+        "risk": "picked up as the USD interest rate spread"
+      },
+      {
+        "trap": "8% FX Haircut illustration '94% x 92% = 86.48%' (11(g)(i))",
+        "risk": "86.48% extracted as a stated valuation percentage in the eligibility table"
+      },
+      {
+        "trap": "Threshold USD 5,000,000 (11(b)(iii)(A))",
+        "risk": "extracted as unconditional, ignoring the 11(g)(ii) override - the single most important failure to catch"
+      },
+      {
+        "trap": "25% single-issuer limit vs 30% corporate limit (11(g)(iii))",
+        "risk": "the two limits transposed"
+      },
+      {
+        "trap": "Party A Threshold 10,000,000 vs Party B 5,000,000",
+        "risk": "party attribution reversed"
+      }
+    ]
+  }
+}

@@ -1,0 +1,147 @@
+{
+  "_provenance": {
+    "simulated": true,
+    "authored": "2026-08-14",
+    "basis": "Hand-authored synthetic derivatives book. Notionals, rates and maturities are plausible for a mid-size IFSC banking unit but are entirely fictional.",
+    "warning": "SIMULATED DATA - not real positions.",
+    "design_note": "Directions are deliberately weighted to receive-fixed on the two largest USD notionals, so that a parallel upward rate shock produces a loss for Party A. Under the stress snapshot Party A becomes the Transferor and must post collateral - which is what puts the Collateral Optimizer on the critical path of the demo."
+  },
+
+  "portfolio_id": "PF-MERIDIAN-001",
+  "netting_set_id": "NS-MERIDIAN-001",
+  "agreement_id": "CSA-MERIDIAN-2026",
+  "book_owner": "PARTY_A",
+  "reporting_currency": "USD",
+  "as_of": "2026-08-14",
+
+  "_netting_rule": "All trades below share netting_set_id NS-MERIDIAN-001 and therefore net. Trades under any other ISDA Master must never be netted against these - the engine enforces this structurally rather than by convention.",
+
+  "trades": [
+    {
+      "trade_id": "IRS-USD-001",
+      "type": "INTEREST_RATE_SWAP",
+      "netting_set_id": "NS-MERIDIAN-001",
+      "notional": "250000000.00",
+      "currency": "USD",
+      "direction": "RECEIVE_FIXED",
+      "fixed_rate": "0.0385",
+      "float_index": "SOFR",
+      "float_spread_bps": 0,
+      "payment_frequency_months": 6,
+      "day_count": "ACT/365F",
+      "effective_date": "2026-03-16",
+      "maturity_date": "2031-03-16"
+    },
+    {
+      "trade_id": "IRS-USD-002",
+      "type": "INTEREST_RATE_SWAP",
+      "netting_set_id": "NS-MERIDIAN-001",
+      "notional": "400000000.00",
+      "currency": "USD",
+      "direction": "RECEIVE_FIXED",
+      "fixed_rate": "0.0360",
+      "float_index": "SOFR",
+      "float_spread_bps": 0,
+      "payment_frequency_months": 3,
+      "day_count": "ACT/365F",
+      "effective_date": "2026-01-20",
+      "maturity_date": "2028-01-20"
+    },
+    {
+      "trade_id": "IRS-USD-003",
+      "type": "INTEREST_RATE_SWAP",
+      "netting_set_id": "NS-MERIDIAN-001",
+      "notional": "60000000.00",
+      "currency": "USD",
+      "direction": "PAY_FIXED",
+      "fixed_rate": "0.0405",
+      "float_index": "SOFR",
+      "float_spread_bps": 0,
+      "payment_frequency_months": 6,
+      "day_count": "ACT/365F",
+      "effective_date": "2026-06-15",
+      "maturity_date": "2036-06-15"
+    },
+    {
+      "trade_id": "IRS-USD-004",
+      "type": "INTEREST_RATE_SWAP",
+      "netting_set_id": "NS-MERIDIAN-001",
+      "notional": "40000000.00",
+      "currency": "USD",
+      "direction": "RECEIVE_FIXED",
+      "fixed_rate": "0.0425",
+      "float_index": "SOFR",
+      "float_spread_bps": 0,
+      "payment_frequency_months": 6,
+      "day_count": "ACT/365F",
+      "effective_date": "2026-02-01",
+      "maturity_date": "2056-02-01"
+    },
+    {
+      "trade_id": "IRS-EUR-005",
+      "type": "INTEREST_RATE_SWAP",
+      "netting_set_id": "NS-MERIDIAN-001",
+      "notional": "150000000.00",
+      "currency": "EUR",
+      "direction": "PAY_FIXED",
+      "fixed_rate": "0.0255",
+      "float_index": "ESTR",
+      "float_spread_bps": 0,
+      "payment_frequency_months": 12,
+      "day_count": "ACT/365F",
+      "effective_date": "2026-05-10",
+      "maturity_date": "2033-05-10"
+    },
+    {
+      "trade_id": "IRS-EUR-006",
+      "type": "INTEREST_RATE_SWAP",
+      "netting_set_id": "NS-MERIDIAN-001",
+      "notional": "90000000.00",
+      "currency": "EUR",
+      "direction": "RECEIVE_FIXED",
+      "fixed_rate": "0.0230",
+      "float_index": "ESTR",
+      "float_spread_bps": 0,
+      "payment_frequency_months": 12,
+      "day_count": "ACT/365F",
+      "effective_date": "2026-09-12",
+      "maturity_date": "2029-09-12"
+    },
+    {
+      "trade_id": "FXF-USDINR-007",
+      "type": "FX_FORWARD",
+      "netting_set_id": "NS-MERIDIAN-001",
+      "buy_currency": "USD",
+      "buy_notional": "75000000.00",
+      "sell_currency": "INR",
+      "strike": "88.5000",
+      "strike_convention": "INR per USD",
+      "maturity_date": "2026-11-20",
+      "_note": "The GIFT City position. Cross-border USD/INR exposure booked in the IFSC."
+    },
+    {
+      "trade_id": "FXF-EURUSD-008",
+      "type": "FX_FORWARD",
+      "netting_set_id": "NS-MERIDIAN-001",
+      "buy_currency": "EUR",
+      "buy_notional": "60000000.00",
+      "sell_currency": "USD",
+      "strike": "1.0850",
+      "strike_convention": "USD per EUR",
+      "maturity_date": "2027-02-18"
+    }
+  ],
+
+  "posted_collateral_balance": {
+    "_note": "Credit Support Balance already held at the start of the scenario. Deliberately small, so the stress scenario generates a substantial Delivery Amount.",
+    "items": [],
+    "value_base_ccy": "0.00"
+  },
+
+  "_expected_behaviour": {
+    "_warning": "Qualitative only. No exposure figures are asserted here - they must be produced by the Risk Engine, never reverse-engineered to match a desired headline.",
+    "base_snapshot": "Exposure near the money. Expected to fall below Party A's USD 10,000,000 Threshold, so no call is generated. This is the control case that proves the Threshold and MTA gates actually gate.",
+    "stress_snapshot": "Upward rate shock. The receive-fixed USD positions (IRS-USD-001, -002, -004, notional 690m combined) lose considerably more than the 60m pay-fixed position gains. Party A is expected to become the Transferor and owe a Delivery Amount well above the USD 500,000 MTA and above its USD 10,000,000 Threshold.",
+    "sizing_check": "A rough DV01 estimate at design time put the net loss in the region of USD 20m, implying a call of roughly USD 10m against inventory with roughly USD 35m of post-haircut value. That is large enough to require real optimisation and small enough to remain feasible. The Risk Engine's actual figure will differ from this estimate and the engine's figure is the one that counts."
+  }
+}

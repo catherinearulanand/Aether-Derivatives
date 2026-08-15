@@ -1,0 +1,334 @@
+{
+  "_provenance": {
+    "simulated": true,
+    "authored": "2026-08-14",
+    "basis": "Hand-authored synthetic yield curves and FX rates. Levels are plausible for the stated dates but are NOT observed market data and were not sourced from any provider.",
+    "warning": "SIMULATED DATA - not real market data. No figure here should be quoted as a market level.",
+    "design_note": "The stress snapshot is a designed shock, not a historical episode. It exists to drive the netting set into a collateral call, and it is labelled as designed so no one mistakes it for a backtest."
+  },
+  "_conventions": {
+    "rate_type": "Continuously compounded zero rates",
+    "day_count": "ACT/365F",
+    "interpolation": "Log-linear on discount factors between pillars, flat extrapolation beyond",
+    "discount_factor": "DF(t) = exp(-z(t) * t)",
+    "single_curve": "One curve per currency serves both discounting and forward projection. No OIS/IBOR basis is modelled. Documented as a simplification, not hidden."
+  },
+  "snapshots": [
+    {
+      "snapshot_id": "MKT-2026-08-14-BASE",
+      "label": "Base",
+      "as_of": "2026-08-14",
+      "kind": "BASE",
+      "description": "Opening state. Exposure is expected to sit inside Party A's Threshold, so no call should be generated. This is the control case that proves the Threshold and MTA gates actually gate.",
+      "curves": {
+        "USD": {
+          "pillars_years": [
+            0.0833,
+            0.25,
+            0.5,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            7.0,
+            10.0,
+            20.0,
+            30.0
+          ],
+          "zero_rates": [
+            0.0362,
+            0.0365,
+            0.037,
+            0.0375,
+            0.0382,
+            0.0388,
+            0.0398,
+            0.0405,
+            0.0412,
+            0.0425,
+            0.0428
+          ]
+        },
+        "EUR": {
+          "pillars_years": [
+            0.0833,
+            0.25,
+            0.5,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            7.0,
+            10.0,
+            20.0,
+            30.0
+          ],
+          "zero_rates": [
+            0.0205,
+            0.0208,
+            0.0212,
+            0.0218,
+            0.0228,
+            0.0236,
+            0.0248,
+            0.0256,
+            0.0265,
+            0.0278,
+            0.028
+          ]
+        },
+        "INR": {
+          "pillars_years": [
+            0.0833,
+            0.25,
+            0.5,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            7.0,
+            10.0,
+            20.0,
+            30.0
+          ],
+          "zero_rates": [
+            0.0635,
+            0.064,
+            0.0645,
+            0.0652,
+            0.066,
+            0.0668,
+            0.0678,
+            0.0685,
+            0.0692,
+            0.0705,
+            0.071
+          ]
+        }
+      },
+      "fx_spot": {
+        "_quote_convention": "Units of the second currency per one unit of the first.",
+        "EURUSD": "1.0925",
+        "USDINR": "87.9000"
+      }
+    },
+    {
+      "snapshot_id": "MKT-2026-08-17-STRESS",
+      "label": "Rate shock",
+      "as_of": "2026-08-17",
+      "kind": "DESIGNED_SHOCK",
+      "description": "USD curve up approximately 125bp with mild flattening, EUR up 40bp, INR up 55bp. EUR weakens against USD, INR weakens against USD. Drives Party A into a Delivery Amount and puts the Collateral Optimizer on the critical path.",
+      "shock_relative_to": "MKT-2026-08-14-BASE",
+      "shock_summary": {
+        "USD": "+125bp at the short end easing to +118bp at 30y",
+        "EUR": "+40bp parallel",
+        "INR": "+55bp parallel",
+        "EURUSD": "-2.6%, EUR weakens",
+        "USDINR": "+2.2%, INR weakens"
+      },
+      "curves": {
+        "USD": {
+          "pillars_years": [
+            0.0833,
+            0.25,
+            0.5,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            7.0,
+            10.0,
+            20.0,
+            30.0
+          ],
+          "zero_rates": [
+            0.0487,
+            0.049,
+            0.0495,
+            0.05,
+            0.0506,
+            0.0511,
+            0.052,
+            0.0526,
+            0.0532,
+            0.0544,
+            0.0546
+          ]
+        },
+        "EUR": {
+          "pillars_years": [
+            0.0833,
+            0.25,
+            0.5,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            7.0,
+            10.0,
+            20.0,
+            30.0
+          ],
+          "zero_rates": [
+            0.0245,
+            0.0248,
+            0.0252,
+            0.0258,
+            0.0268,
+            0.0276,
+            0.0288,
+            0.0296,
+            0.0305,
+            0.0318,
+            0.032
+          ]
+        },
+        "INR": {
+          "pillars_years": [
+            0.0833,
+            0.25,
+            0.5,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            7.0,
+            10.0,
+            20.0,
+            30.0
+          ],
+          "zero_rates": [
+            0.069,
+            0.0695,
+            0.07,
+            0.0707,
+            0.0715,
+            0.0723,
+            0.0733,
+            0.074,
+            0.0747,
+            0.076,
+            0.0765
+          ]
+        }
+      },
+      "fx_spot": {
+        "_quote_convention": "Units of the second currency per one unit of the first.",
+        "EURUSD": "1.0640",
+        "USDINR": "89.8500"
+      }
+    },
+    {
+      "snapshot_id": "MKT-2026-08-18-CRASH",
+      "label": "Flash crash",
+      "as_of": "2026-08-18",
+      "kind": "DESIGNED_SHOCK",
+      "description": "Risk-off. A sharp equity sell-off drives a flight to quality: the USD curve rallies about 150bp, EUR 60bp, INR 45bp, and the dollar strengthens. The book moves INTO the money, so Party B becomes the Transferor and Party B's ratings-contingent Threshold governs the call. This is the scenario in which the reviewer's decision on Paragraph 11(g)(ii) visibly changes the number.",
+      "shock_relative_to": "MKT-2026-08-14-BASE",
+      "shock_summary": {
+        "USD": "-150bp parallel",
+        "EUR": "-60bp parallel",
+        "INR": "-45bp parallel",
+        "EURUSD": "-1.9%, dollar strengthens",
+        "USDINR": "+1.5%, rupee weakens"
+      },
+      "curves": {
+        "USD": {
+          "pillars_years": [
+            0.0833,
+            0.25,
+            0.5,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            7.0,
+            10.0,
+            20.0,
+            30.0
+          ],
+          "zero_rates": [
+            0.0212,
+            0.0215,
+            0.022,
+            0.0225,
+            0.0232,
+            0.0238,
+            0.0248,
+            0.0255,
+            0.0262,
+            0.0275,
+            0.0278
+          ]
+        },
+        "EUR": {
+          "pillars_years": [
+            0.0833,
+            0.25,
+            0.5,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            7.0,
+            10.0,
+            20.0,
+            30.0
+          ],
+          "zero_rates": [
+            0.0145,
+            0.0148,
+            0.0152,
+            0.0158,
+            0.0168,
+            0.0176,
+            0.0188,
+            0.0196,
+            0.0205,
+            0.0218,
+            0.022
+          ]
+        },
+        "INR": {
+          "pillars_years": [
+            0.0833,
+            0.25,
+            0.5,
+            1.0,
+            2.0,
+            3.0,
+            5.0,
+            7.0,
+            10.0,
+            20.0,
+            30.0
+          ],
+          "zero_rates": [
+            0.059,
+            0.0595,
+            0.06,
+            0.0607,
+            0.0615,
+            0.0623,
+            0.0633,
+            0.064,
+            0.0647,
+            0.066,
+            0.0665
+          ]
+        }
+      },
+      "fx_spot": {
+        "_quote_convention": "Units of the second currency per one unit of the first.",
+        "EURUSD": "1.0717",
+        "USDINR": "89.2200"
+      }
+    }
+  ],
+  "_demo_sequence": {
+    "step_1": "Run the netting set against MKT-2026-08-14-BASE. Expect no call. The Threshold gate is visibly doing work.",
+    "step_2": "Switch to MKT-2026-08-17-STRESS. Exposure moves against Party A and a Delivery Amount is generated.",
+    "step_3": "Optimizer allocates from INV-AETHER-001 against that Delivery Amount, subject to the CSA eligibility table, the 8% FX haircut, and the three concentration limits.",
+    "step_4": "Decision is recorded and the audit chain is written and verified."
+  }
+}

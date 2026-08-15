@@ -1,0 +1,316 @@
+@import "tailwindcss";
+
+/*
+ * AETHER design tokens.
+ *
+ * A collateral operations console, not a marketing page. Dense, tabular, dark by
+ * default because that is what a desk system looks like and because judges form a
+ * credibility judgement before they read a single number.
+ *
+ * The accent is a verdigris teal — institutional without being the default corporate
+ * blue. Semantic colours (warn, critical) are deliberately separate from the accent
+ * so "needs attention" never reads as "branded".
+ */
+
+:root {
+  --ground: #0b100f;
+  --surface: #121a19;
+  --surface-2: #182321;
+  --surface-3: #1f2c2a;
+  --rule: #263533;
+  --rule-soft: #1c2827;
+
+  --ink: #e6edeb;
+  --ink-mid: #a9bcb8;
+  --ink-mute: #7b908c;
+  --ink-faint: #556764;
+
+  --accent: #4fc3ae;
+  --accent-dim: #2f8b7c;
+  --accent-wash: rgba(79, 195, 174, 0.1);
+
+  --warn: #e0a33c;
+  --warn-wash: rgba(224, 163, 60, 0.12);
+  --crit: #e2687f;
+  --crit-wash: rgba(226, 104, 127, 0.12);
+  --pos: #4fc3ae;
+  --neg: #e2687f;
+
+  --mono: "Cascadia Mono", "Cascadia Code", Consolas, ui-monospace, "SF Mono", Menlo,
+    monospace;
+  --sans: "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont,
+    "Helvetica Neue", Arial, sans-serif;
+  --serif: "Cambria", "Palatino Linotype", Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Figures line up in columns everywhere. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--mono);
+}
+
+.mono {
+  font-family: var(--mono);
+}
+
+.serif {
+  font-family: var(--serif);
+}
+
+/* ---------- structural primitives ---------- */
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+}
+
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--surface-2);
+}
+
+.panel-title {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  font-weight: 600;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ---------- data tables ---------- */
+
+table.grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+table.grid thead th {
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 600;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--rule);
+  white-space: nowrap;
+}
+
+table.grid tbody td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--rule-soft);
+  vertical-align: top;
+}
+
+table.grid tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+table.grid tbody tr:hover td {
+  background: var(--surface-2);
+}
+
+td.num,
+th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--mono);
+  white-space: nowrap;
+}
+
+/* ---------- chips ---------- */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 2px;
+  white-space: nowrap;
+  background: var(--surface-3);
+  color: var(--ink-mid);
+  border: 1px solid var(--rule);
+}
+
+.chip-accent {
+  background: var(--accent-wash);
+  color: var(--accent);
+  border-color: transparent;
+}
+
+.chip-warn {
+  background: var(--warn-wash);
+  color: var(--warn);
+  border-color: transparent;
+}
+
+.chip-crit {
+  background: var(--crit-wash);
+  color: var(--crit);
+  border-color: transparent;
+}
+
+/* ---------- values ---------- */
+
+.value-pos {
+  color: var(--pos);
+}
+
+.value-neg {
+  color: var(--neg);
+}
+
+/* ---------- controls ---------- */
+
+button,
+.btn {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 3px;
+  border: 1px solid var(--rule);
+  background: var(--surface-2);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+button:hover:not(:disabled),
+.btn:hover {
+  background: var(--surface-3);
+  border-color: var(--accent-dim);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: var(--accent-dim);
+  border-color: var(--accent-dim);
+  color: #04100e;
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+input,
+textarea,
+select {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  background: var(--ground);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  color: var(--ink);
+  padding: 7px 10px;
+  width: 100%;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ---------- scrollbars ---------- */
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--ground);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-3);
+  border-radius: 5px;
+  border: 2px solid var(--ground);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--rule);
+}
+
+/* ---------- motion ---------- */
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.pulse {
+  animation: pulse-soft 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

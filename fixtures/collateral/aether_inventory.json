@@ -1,0 +1,176 @@
+{
+  "_provenance": {
+    "simulated": true,
+    "authored": "2026-08-14",
+    "basis": "Hand-authored synthetic collateral inventory for Party A. Asset identifiers are fictional placeholders in ISIN-like format and do not correspond to real securities.",
+    "warning": "SIMULATED DATA - not a real inventory. Funding spreads are illustrative, not quoted repo levels.",
+    "design_note": "Costs are set so the three cheapest assets by headline funding spread (equity, corporate debt) are exactly the assets the CSA concentration limits cap. The optimizer must fill to the caps and then fall back to sovereigns, which makes the LP dual values meaningful instead of decorative."
+  },
+  "inventory_id": "INV-AETHER-001",
+  "owner": "PARTY_A",
+  "as_of": "2026-08-14",
+  "base_currency": "USD",
+  "_cost_model": {
+    "funding_spread_bps": "Annualised cost of encumbering the asset - the opportunity cost of not being able to deploy or repo it elsewhere. This is the LP objective coefficient.",
+    "why_cash_is_expensive": "Cash carries the highest opportunity cost despite a 100% valuation percentage, because it is the most fungible asset on the balance sheet. This is why a naive cash-first heuristic is expensive, and it is the whole point of the optimizer.",
+    "cost_per_effective_unit": "funding_spread_bps / (valuation_pct * (1 - fx_haircut)). Computed by the engine, not stored here. This is the cheapest-to-deliver ranking metric."
+  },
+  "assets": [
+    {
+      "asset_id": "CASH-USD",
+      "description": "Cash balance, USD",
+      "asset_class": "CASH",
+      "issuer": "CASH",
+      "issuer_type": "CASH",
+      "currency": "USD",
+      "available_market_value": "5000000.00",
+      "funding_spread_bps": 30,
+      "csa_eligibility_ref": "A"
+    },
+    {
+      "asset_id": "CASH-EUR",
+      "description": "Cash balance, EUR",
+      "asset_class": "CASH",
+      "issuer": "CASH",
+      "issuer_type": "CASH",
+      "currency": "EUR",
+      "available_market_value": "2000000.00",
+      "funding_spread_bps": 28,
+      "csa_eligibility_ref": "B"
+    },
+    {
+      "asset_id": "US0000T6M01",
+      "description": "US Treasury Bill, 6 month",
+      "asset_class": "SOVEREIGN_BOND",
+      "issuer": "US_TREASURY",
+      "issuer_type": "SOVEREIGN",
+      "currency": "USD",
+      "remaining_maturity_years": 0.5,
+      "rating": "AA+",
+      "available_market_value": "4000000.00",
+      "funding_spread_bps": 8,
+      "csa_eligibility_ref": "C"
+    },
+    {
+      "asset_id": "US0000T3Y02",
+      "description": "US Treasury Note, 3 year",
+      "asset_class": "SOVEREIGN_BOND",
+      "issuer": "US_TREASURY",
+      "issuer_type": "SOVEREIGN",
+      "currency": "USD",
+      "remaining_maturity_years": 3.0,
+      "rating": "AA+",
+      "available_market_value": "6000000.00",
+      "funding_spread_bps": 12,
+      "csa_eligibility_ref": "D"
+    },
+    {
+      "asset_id": "US0000T7Y03",
+      "description": "US Treasury Note, 7 year",
+      "asset_class": "SOVEREIGN_BOND",
+      "issuer": "US_TREASURY",
+      "issuer_type": "SOVEREIGN",
+      "currency": "USD",
+      "remaining_maturity_years": 7.0,
+      "rating": "AA+",
+      "available_market_value": "5000000.00",
+      "funding_spread_bps": 15,
+      "csa_eligibility_ref": "E"
+    },
+    {
+      "asset_id": "DE0000B5Y04",
+      "description": "Bundesrepublik Deutschland, 5 year",
+      "asset_class": "SOVEREIGN_BOND",
+      "issuer": "GERMANY",
+      "issuer_type": "SOVEREIGN",
+      "currency": "EUR",
+      "remaining_maturity_years": 5.0,
+      "rating": "AAA",
+      "available_market_value": "4500000.00",
+      "funding_spread_bps": 10,
+      "csa_eligibility_ref": "F"
+    },
+    {
+      "asset_id": "IN0000G6Y05",
+      "description": "Government of India dated security, 6 year",
+      "asset_class": "SOVEREIGN_BOND",
+      "issuer": "INDIA",
+      "issuer_type": "SOVEREIGN",
+      "currency": "INR",
+      "remaining_maturity_years": 6.0,
+      "rating": "BBB-",
+      "available_market_value": "400000000.00",
+      "funding_spread_bps": 9,
+      "csa_eligibility_ref": "G",
+      "_note": "The GIFT City asset. Cheap in headline terms, but 94% valuation x 8% FX haircut gives an effective 86.48%. The demo shows the optimizer pricing that drag explicitly rather than ignoring it."
+    },
+    {
+      "asset_id": "US0000C3Y06",
+      "description": "Corporate note, Northwind Technologies Inc, 3 year",
+      "asset_class": "CORPORATE_BOND",
+      "issuer": "NORTHWIND_TECH",
+      "issuer_type": "CORPORATE",
+      "currency": "USD",
+      "remaining_maturity_years": 3.0,
+      "rating": "AA+",
+      "available_market_value": "3000000.00",
+      "funding_spread_bps": 4,
+      "csa_eligibility_ref": "H"
+    },
+    {
+      "asset_id": "US0000C4Y07",
+      "description": "Corporate note, Contoso Industrial Corp, 4 year",
+      "asset_class": "CORPORATE_BOND",
+      "issuer": "CONTOSO_IND",
+      "issuer_type": "CORPORATE",
+      "currency": "USD",
+      "remaining_maturity_years": 4.0,
+      "rating": "AAA",
+      "available_market_value": "2500000.00",
+      "funding_spread_bps": 5,
+      "csa_eligibility_ref": "H"
+    },
+    {
+      "asset_id": "US0000E0Y08",
+      "description": "Equity basket, S&P 500 constituents",
+      "asset_class": "EQUITY",
+      "issuer": "SPX_BASKET",
+      "issuer_type": "CORPORATE",
+      "currency": "USD",
+      "index_membership": "SPX",
+      "available_market_value": "2000000.00",
+      "funding_spread_bps": 2,
+      "csa_eligibility_ref": "I"
+    },
+    {
+      "asset_id": "US0000C2Y09",
+      "description": "Corporate note, Meridian Global Markets plc, 2 year",
+      "asset_class": "CORPORATE_BOND",
+      "issuer": "MERIDIAN_GLOBAL",
+      "issuer_type": "CORPORATE",
+      "currency": "USD",
+      "remaining_maturity_years": 2.0,
+      "rating": "AA-",
+      "available_market_value": "1500000.00",
+      "funding_spread_bps": 3,
+      "csa_eligibility_ref": "H",
+      "_trap": "WRONG-WAY RISK. Paper issued by the counterparty itself. Cheapest corporate in the pool, and GENUINELY eligible on its face under item (H): AA- exactly meets that row's minimum rating, 2y sits inside the 5y band, USD is the base currency. The only thing excluding it is CSA Paragraph 11(g)(iv). Two tests cover it - one asserting exclusion, one asserting it would otherwise match row (H) - so the trap cannot pass for the wrong reason. Rating was AA- rather than A+ deliberately: at A+ it would fail row (H) on rating alone and the wrong-way rule would never be exercised."
+    },
+    {
+      "asset_id": "XAU-ALLOC-01",
+      "description": "Allocated gold bullion, LBMA Good Delivery",
+      "asset_class": "GOLD",
+      "issuer": "BULLION",
+      "issuer_type": "NONE",
+      "currency": "USD",
+      "available_market_value": "3000000.00",
+      "funding_spread_bps": 6,
+      "csa_eligibility_ref": "J",
+      "_note": "Bullion has no issuer and no maturity, so the rating and maturity predicates must not apply to it. Cheap to encumber but valued at 88%, which puts it between the corporates and the Treasury bill on cost per effective unit - and the 15% cap under 11(g)(iii)(D) binds before its full balance can be used."
+    }
+  ],
+  "_baseline_heuristic": {
+    "name": "cash_first",
+    "description": "The naive desk heuristic the optimizer is measured against: exhaust cash, then post sovereigns in ascending maturity, ignoring cost entirely. Implemented in core/optimize.py as the comparison baseline. The saving reported in the demo is the measured difference between this and the LP solution on the same call."
+  }
+}

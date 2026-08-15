@@ -1,0 +1,370 @@
+{
+  "_provenance": {
+    "simulated": true,
+    "authored": "2026-08-14",
+    "basis": "Replay cache for the Legal-Clause Agent, keyed to fixtures/documents/csa_meridian_2026.md.",
+    "authored_by_hand": true,
+    "honesty_note": "IMPORTANT: this cache was authored by hand, not captured from a live model run, because no ANTHROPIC_API_KEY was available in the build environment. It represents the extraction a correct run should produce. When a live run is captured, this file should be regenerated from it and this note updated. Do not describe replay-mode output as 'model output' while this flag is true.",
+    "warning": "SIMULATED DATA - not real institutional data."
+  },
+  "document_id": "CSA-MERIDIAN-2026",
+  "model_id": "claude-opus-5",
+  "prompt_version": "legal-clause/v1",
+  "mode": "replay",
+  "temperature": 0.0,
+  "fields": [
+    {
+      "path": "party_b.legal_name",
+      "value": "Meridian Global Markets plc",
+      "confidence": 0.98,
+      "citation": {
+        "page": 1,
+        "section": "Preamble",
+        "quote": "**MERIDIAN GLOBAL MARKETS PLC**, a company incorporated under the laws of England and Wales"
+      }
+    },
+    {
+      "path": "party_a.legal_name",
+      "value": "AETHER Capital Markets (IFSC) Limited",
+      "confidence": 0.98,
+      "citation": {
+        "page": 1,
+        "section": "Preamble",
+        "quote": "**AETHER CAPITAL MARKETS (IFSC) LIMITED**, an IFSC Banking Unit established under the laws of India and licensed by the International Financial Services Centres Authority"
+      }
+    },
+    {
+      "path": "base_currency",
+      "value": "USD",
+      "confidence": 0.99,
+      "citation": {
+        "page": 4,
+        "section": "11(a)(i)",
+        "quote": "\"Base Currency\" means United States Dollars (USD)."
+      }
+    },
+    {
+      "path": "eligible_currencies",
+      "value": [
+        "USD",
+        "EUR",
+        "INR"
+      ],
+      "confidence": 0.98,
+      "citation": {
+        "page": 4,
+        "section": "11(a)(ii)",
+        "quote": "\"Eligible Currency\" means the Base Currency, the Euro (EUR) and the Indian Rupee (INR)."
+      }
+    },
+    {
+      "path": "threshold.party_a",
+      "value": {
+        "amount": "10000000.00",
+        "currency": "USD"
+      },
+      "confidence": 0.97,
+      "citation": {
+        "page": 5,
+        "section": "11(b)(iii)(A)",
+        "quote": "Party A: USD 10,000,000."
+      }
+    },
+    {
+      "path": "threshold.party_b",
+      "value": {
+        "amount": "5000000.00",
+        "currency": "USD"
+      },
+      "confidence": 0.52,
+      "requires_review": true,
+      "review_reason": "CONDITIONAL_CLAUSE",
+      "review_note": "Paragraph 11(b)(iii)(A) states USD 5,000,000 but qualifies it 'subject to Paragraph 11(g)(ii)', which sets the Threshold to zero for as long as a Ratings Event is continuing. The document defines the trigger but cannot tell us whether it is currently in effect. A reviewer must confirm Party B's current rating before this agreement is frozen.",
+      "conditional": {
+        "trigger": "Ratings Event",
+        "condition": "Party B long-term senior unsecured rating below A- (S&P) or below A3 (Moody's)",
+        "value_if_triggered": {
+          "amount": "0.00",
+          "currency": "USD"
+        },
+        "trigger_citation": {
+          "page": 7,
+          "section": "11(g)(ii)",
+          "quote": "the Threshold with respect to Party B shall be zero"
+        }
+      },
+      "citation": {
+        "page": 5,
+        "section": "11(b)(iii)(A)",
+        "quote": "Party B: USD 5,000,000, subject to Paragraph 11(g)(ii)."
+      }
+    },
+    {
+      "path": "minimum_transfer_amount.party_a",
+      "value": {
+        "amount": "500000.00",
+        "currency": "USD"
+      },
+      "confidence": 0.96,
+      "citation": {
+        "page": 5,
+        "section": "11(b)(iii)(B)",
+        "quote": "\"Minimum Transfer Amount\" means, with respect to Party A and Party B, USD 500,000."
+      }
+    },
+    {
+      "path": "minimum_transfer_amount.party_b",
+      "value": {
+        "amount": "500000.00",
+        "currency": "USD"
+      },
+      "confidence": 0.96,
+      "citation": {
+        "page": 5,
+        "section": "11(b)(iii)(B)",
+        "quote": "\"Minimum Transfer Amount\" means, with respect to Party A and Party B, USD 500,000."
+      }
+    },
+    {
+      "path": "independent_amount.party_a",
+      "value": {
+        "amount": "0.00",
+        "currency": "USD"
+      },
+      "confidence": 0.95,
+      "citation": {
+        "page": 4,
+        "section": "11(b)(ii)",
+        "quote": "Party A: zero."
+      }
+    },
+    {
+      "path": "independent_amount.party_b",
+      "value": {
+        "amount": "2000000.00",
+        "currency": "USD"
+      },
+      "confidence": 0.97,
+      "citation": {
+        "page": 4,
+        "section": "11(b)(ii)",
+        "quote": "Party B: USD 2,000,000."
+      }
+    },
+    {
+      "path": "rounding.increment",
+      "value": {
+        "amount": "100000.00",
+        "currency": "USD"
+      },
+      "confidence": 0.96,
+      "citation": {
+        "page": 5,
+        "section": "11(b)(iii)(D)",
+        "quote": "in each case to the nearest integral multiple of USD 100,000."
+      }
+    },
+    {
+      "path": "rounding.delivery_direction",
+      "value": "UP",
+      "confidence": 0.95,
+      "citation": {
+        "page": 5,
+        "section": "11(b)(iii)(D)",
+        "quote": "The Delivery Amount will be rounded up"
+      }
+    },
+    {
+      "path": "rounding.return_direction",
+      "value": "DOWN",
+      "confidence": 0.95,
+      "citation": {
+        "page": 5,
+        "section": "11(b)(iii)(D)",
+        "quote": "the Return Amount will be rounded down"
+      }
+    },
+    {
+      "path": "mta_before_rounding",
+      "value": true,
+      "confidence": 0.91,
+      "citation": {
+        "page": 3,
+        "section": "3(b)",
+        "quote": "the Minimum Transfer Amount test in Paragraphs 2(a) and 2(b) is applied to the unrounded amount, and rounding is applied only after that test has been satisfied."
+      }
+    },
+    {
+      "path": "fx_haircut_pct",
+      "value": "0.08",
+      "confidence": 0.94,
+      "citation": {
+        "page": 6,
+        "section": "11(g)(i)",
+        "quote": "shall be further reduced by 8% (an \"FX Haircut\"), applied multiplicatively."
+      }
+    },
+    {
+      "path": "valuation_agent",
+      "value": "PARTY_A",
+      "confidence": 0.93,
+      "citation": {
+        "page": 5,
+        "section": "11(c)(i)",
+        "quote": "\"Valuation Agent\" means Party A"
+      }
+    },
+    {
+      "path": "valuation_time",
+      "value": "17:00 Asia/Kolkata",
+      "confidence": 0.89,
+      "citation": {
+        "page": 5,
+        "section": "11(c)(iii)",
+        "quote": "\"Valuation Time\" means 5:00 p.m., GIFT City time (IST)"
+      }
+    },
+    {
+      "path": "notification_time",
+      "value": "13:00 Europe/London",
+      "confidence": 0.9,
+      "citation": {
+        "page": 5,
+        "section": "11(c)(iv)",
+        "quote": "\"Notification Time\" means 1:00 p.m., London time, on a Local Business Day."
+      }
+    },
+    {
+      "path": "interest_rate.USD",
+      "value": {
+        "index": "SOFR",
+        "spread_bps": -10
+      },
+      "confidence": 0.92,
+      "citation": {
+        "page": 6,
+        "section": "11(e)(i)",
+        "quote": "in USD: the Secured Overnight Financing Rate (SOFR) minus 10 basis points"
+      }
+    },
+    {
+      "path": "eligible_collateral",
+      "value": [
+        {
+          "ref": "A",
+          "asset_class": "CASH",
+          "currency": "USD",
+          "valuation_pct": "1.000",
+          "issuer_type": "CASH"
+        },
+        {
+          "ref": "B",
+          "asset_class": "CASH",
+          "currency": "ANY_ELIGIBLE_NON_BASE",
+          "valuation_pct": "1.000",
+          "issuer_type": "CASH"
+        },
+        {
+          "ref": "C",
+          "asset_class": "SOVEREIGN_BOND",
+          "issuer": "US_TREASURY",
+          "max_maturity_years": 1,
+          "valuation_pct": "0.995",
+          "issuer_type": "SOVEREIGN"
+        },
+        {
+          "ref": "D",
+          "asset_class": "SOVEREIGN_BOND",
+          "issuer": "US_TREASURY",
+          "min_maturity_years": 1,
+          "max_maturity_years": 5,
+          "valuation_pct": "0.980",
+          "issuer_type": "SOVEREIGN"
+        },
+        {
+          "ref": "E",
+          "asset_class": "SOVEREIGN_BOND",
+          "issuer": "US_TREASURY",
+          "min_maturity_years": 5,
+          "max_maturity_years": 10,
+          "valuation_pct": "0.960",
+          "issuer_type": "SOVEREIGN"
+        },
+        {
+          "ref": "F",
+          "asset_class": "SOVEREIGN_BOND",
+          "issuer": "GERMANY",
+          "max_maturity_years": 10,
+          "valuation_pct": "0.970",
+          "issuer_type": "SOVEREIGN"
+        },
+        {
+          "ref": "G",
+          "asset_class": "SOVEREIGN_BOND",
+          "issuer": "INDIA",
+          "max_maturity_years": 10,
+          "valuation_pct": "0.940",
+          "issuer_type": "SOVEREIGN"
+        },
+        {
+          "ref": "H",
+          "asset_class": "CORPORATE_BOND",
+          "min_rating": "AA-",
+          "max_maturity_years": 5,
+          "valuation_pct": "0.920",
+          "issuer_type": "CORPORATE"
+        },
+        {
+          "ref": "I",
+          "asset_class": "EQUITY",
+          "index_member": [
+            "SPX",
+            "SX5E",
+            "NIFTY50"
+          ],
+          "valuation_pct": "0.850",
+          "issuer_type": "CORPORATE"
+        },
+        {
+          "ref": "J",
+          "asset_class": "GOLD",
+          "issuer_type": "NONE",
+          "valuation_pct": "0.880"
+        }
+      ],
+      "confidence": 0.88,
+      "citation": {
+        "page": 4,
+        "section": "11(b)(i)",
+        "quote": "The following items will qualify as \"Eligible Credit Support (VM)\" for the party specified"
+      }
+    },
+    {
+      "path": "concentration_limits",
+      "value": [
+        {
+          "scope": "SINGLE_NON_SOVEREIGN_ISSUER",
+          "limit_pct": "0.25"
+        },
+        {
+          "scope": "CORPORATE_BOND",
+          "limit_pct": "0.30"
+        },
+        {
+          "scope": "EQUITY",
+          "limit_pct": "0.20"
+        },
+        {
+          "scope": "GOLD",
+          "limit_pct": "0.15"
+        }
+      ],
+      "confidence": 0.87,
+      "citation": {
+        "page": 7,
+        "section": "11(g)(iii)",
+        "quote": "No item of Eligible Credit Support (VM) shall be included in the Credit Support Balance to the extent that its inclusion would cause"
+      }
+    }
+  ]
+}
