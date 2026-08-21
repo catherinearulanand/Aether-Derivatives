@@ -52,19 +52,26 @@ export function useBaselineRun() {
 }
 
 /**
- * The before/after comparison.
+ * The comparison between two named snapshots.
  *
  * Deltas are computed server-side in `Decimal`; this hook only transports them.
+ * Keyed by the pair, so the desk blotter asking for consecutive valuation dates
+ * and the workflow screen asking for baseline-to-current share a cache when the
+ * pair happens to match.
  */
+export function useComparisonBetween(before: string, after: string) {
+  return useQuery({
+    queryKey: ["comparison", before, after],
+    queryFn: () => api.comparison(before, after),
+    enabled: Boolean(before) && Boolean(after) && before !== after,
+  });
+}
+
+/** The before/after comparison for the snapshot pair currently selected. */
 export function useComparison() {
   const baselineKey = useAether((s) => s.baselineKey);
   const currentKey = useAether((s) => s.currentKey);
-
-  return useQuery({
-    queryKey: ["comparison", baselineKey, currentKey],
-    queryFn: () => api.comparison(baselineKey, currentKey),
-    enabled: baselineKey !== currentKey,
-  });
+  return useComparisonBetween(baselineKey, currentKey);
 }
 
 /** The nine-stage workflow, derived from the current run. */
@@ -81,9 +88,10 @@ export function useWorkflow(): Workflow | null {
  * together in one render — a half-updated approval state on a margin screen would
  * be worse than a slow one.
  */
-export function useApproval() {
+export function useApproval(scenarioKey?: string) {
   const client = useQueryClient();
-  const key = useAether((s) => s.currentKey);
+  const currentKey = useAether((s) => s.currentKey);
+  const key = scenarioKey ?? currentKey;
   const identity = useAether((s) => s.identity);
   const role = useAether((s) => s.role);
 
