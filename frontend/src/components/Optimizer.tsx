@@ -89,14 +89,14 @@ export function Optimizer({ allocation }: { allocation: Allocation | null }) {
           <table className="grid">
             <thead>
               <tr>
-                <th>Asset</th>
-                <th>Class</th>
-                <th className="num">Posted (market value)</th>
-                <th className="num">Effective %</th>
-                <th className="num">Collateral value</th>
-                <th className="num">Spread</th>
-                <th className="num">Cost / effective unit</th>
-                <th className="num">Annual cost</th>
+                <th scope="col">Asset</th>
+                <th scope="col">Class</th>
+                <th scope="col" className="num">Posted (market value)</th>
+                <th scope="col" className="num">Effective %</th>
+                <th scope="col" className="num">Collateral value</th>
+                <th scope="col" className="num">Spread</th>
+                <th scope="col" className="num">Cost / effective unit</th>
+                <th scope="col" className="num">Annual cost</th>
               </tr>
             </thead>
             <tbody>
@@ -158,8 +158,8 @@ export function Optimizer({ allocation }: { allocation: Allocation | null }) {
           <table className="grid">
             <thead>
               <tr>
-                <th>Constraint</th>
-                <th className="num">Marginal cost</th>
+                <th scope="col">Constraint</th>
+                <th scope="col" className="num">Marginal cost</th>
               </tr>
             </thead>
             <tbody>
@@ -195,9 +195,9 @@ export function Optimizer({ allocation }: { allocation: Allocation | null }) {
             <table className="grid">
               <thead>
                 <tr>
-                  <th>Asset</th>
-                  <th className="num">Posted</th>
-                  <th className="num">Annual cost</th>
+                  <th scope="col">Asset</th>
+                  <th scope="col" className="num">Posted</th>
+                  <th scope="col" className="num">Annual cost</th>
                 </tr>
               </thead>
               <tbody>
@@ -269,11 +269,11 @@ function NotSelected({ allocation }: { allocation: Allocation }) {
         <table className="grid">
           <thead>
             <tr>
-              <th>Asset</th>
-              <th className="num">Available</th>
-              <th className="num">Effective %</th>
-              <th className="num">Cost / effective unit</th>
-              <th>Why it was not used</th>
+              <th scope="col">Asset</th>
+              <th scope="col" className="num">Available</th>
+              <th scope="col" className="num">Effective %</th>
+              <th scope="col" className="num">Cost / effective unit</th>
+              <th scope="col">Why it was not used</th>
             </tr>
           </thead>
           <tbody>

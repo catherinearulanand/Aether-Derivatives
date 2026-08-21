@@ -13,6 +13,7 @@ rules govern it:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from decimal import Decimal
 from typing import Any
 
@@ -23,7 +24,7 @@ from aether.core.decision import Decision
 from aether.core.exposure import ExposureResult
 from aether.core.im import InitialMarginResult
 from aether.core.money import Money
-from aether.core.optimize import OptimizationResult
+from aether.core.optimize import AllocationLine, OptimizationResult
 from aether.core.sensitivities import SensitivityMarginResult
 from aether.core.settlement import SettlementInstruction, to_iso20022_xml, to_mt527
 from aether.pipeline import PipelineResult
@@ -33,6 +34,7 @@ __all__ = [
     "serialise_agents",
     "serialise_agreement",
     "serialise_audit",
+    "serialise_comparison",
     "serialise_decision",
     "serialise_exposure",
     "serialise_margin_call",
@@ -40,6 +42,7 @@ __all__ = [
     "serialise_run",
     "serialise_sensitivity_margin",
     "serialise_settlement",
+    "threshold_status",
 ]
 
 
@@ -493,4 +496,350 @@ def serialise_run(result: PipelineResult) -> dict[str, Any]:
         "agents": serialise_agents(result),
         "decision": serialise_decision(result.decision),
         "audit": serialise_audit(result),
+    }
+
+
+# ---------------------------------------------------------------- comparison
+
+#: Which figures a before/after comparison reports, in the order a reader needs
+#: them: what the market did, what that did to exposure, what the CSA then
+#: required, and what the optimiser posted against it.
+#:
+#: Each entry is ``(id, label, basis)``. Values are resolved in :func:`_metric_value`
+#: so this table stays readable as documentation of what the comparison claims.
+COMPARISON_METRICS: tuple[tuple[str, str, str], ...] = (
+    (
+        "portfolio_mtm",
+        "Portfolio mark-to-market",
+        "Net present value of the netting set in base currency, signed from Party A's "
+        "perspective. Negative means Party A is out of the money.",
+    ),
+    (
+        "gross_positive",
+        "Gross positive value",
+        "Sum of the in-the-money trades, before netting.",
+    ),
+    (
+        "netting_benefit",
+        "Netting benefit",
+        "What close-out netting removes from the gross figure.",
+    ),
+    (
+        "credit_support_amount",
+        "Credit Support Amount",
+        "Paragraph 2(c): exposure less Threshold, plus any Independent Amount. The "
+        "margin requirement, before the MTA gate and rounding.",
+    ),
+    (
+        "threshold",
+        "Threshold",
+        "The Transferor's unsecured allowance. Changes when the Transferor changes.",
+    ),
+    (
+        "call_amount",
+        "Collateral requirement (transfer)",
+        "The Delivery or Return Amount after the Minimum Transfer Amount gate and "
+        "directional rounding.",
+    ),
+    (
+        "eligible_pool",
+        "Eligible collateral available",
+        "Market value of every inventory asset passing the CSA eligibility schedule, "
+        "converted to base currency at the pinned snapshot's FX.",
+    ),
+    (
+        "collateral_market_value",
+        "Collateral encumbered (market value)",
+        "Market value of the assets the optimiser selected, before haircut.",
+    ),
+    (
+        "collateral_post_haircut",
+        "Collateral delivered (post-haircut)",
+        "What those assets are worth as credit support after the schedule valuation "
+        "percentage and any FX haircut.",
+    ),
+    (
+        "funding_cost",
+        "Annual funding cost of the allocation",
+        "Cost of encumbering the selected assets for a year at their funding spreads.",
+    ),
+    (
+        "sensitivity_im",
+        "Sensitivity initial margin",
+        "Risk-weighted aggregation of measured sensitivities. Indicative, and not "
+        "charged to the variation margin call.",
+    ),
+    (
+        "schedule_im",
+        "Schedule initial margin",
+        "BCBS-IOSCO standardised grid applied to notional. Indicative, and not "
+        "charged to the variation margin call.",
+    ),
+)
+
+
+def _eligible_pool(result: PipelineResult) -> Money:
+    """Base-currency market value of the eligible collateral pool.
+
+    Converted with :meth:`MarketSnapshot.convert` — the same pinned FX the optimizer
+    itself uses at ``optimize.py`` — so this figure cannot disagree with the
+    allocation it sits beside. Assets the eligibility schedule excluded are absent
+    from ``considered`` and are therefore not counted.
+    """
+    base = result.terms.base_currency
+    total = Money.zero(base)
+    if result.allocation is None:
+        return total
+    for line in result.allocation.considered:
+        if line.available_market_value is None:
+            continue
+        total = total + result.snapshot.convert(line.available_market_value, base)
+    return total
+
+
+def _collateral_market_value(result: PipelineResult) -> Money:
+    """Market value of what was actually selected, before haircut."""
+    base = result.terms.base_currency
+    total = Money.zero(base)
+    if result.allocation is None:
+        return total
+    for line in result.allocation.lines:
+        total = total + line.market_value_posted
+    return total
+
+
+def _metric_value(result: PipelineResult, metric_id: str) -> Money:
+    """Read one comparison figure off a completed run.
+
+    Every entry returns a value the engine already computed. Nothing is derived here
+    beyond summation of like-currency amounts in :class:`~decimal.Decimal`.
+    """
+    base = result.terms.base_currency
+    readers: dict[str, Callable[[], Money]] = {
+        "portfolio_mtm": lambda: result.exposure.exposure,
+        "gross_positive": lambda: result.exposure.gross_positive,
+        "netting_benefit": lambda: result.exposure.netting_benefit,
+        "credit_support_amount": lambda: result.margin_call.credit_support_amount,
+        "threshold": lambda: result.margin_call.threshold,
+        "call_amount": lambda: result.margin_call.call_amount,
+        "eligible_pool": lambda: _eligible_pool(result),
+        "collateral_market_value": lambda: _collateral_market_value(result),
+        "collateral_post_haircut": lambda: (
+            Money.zero(base) if result.allocation is None else result.allocation.allocated_value
+        ),
+        "funding_cost": lambda: (
+            Money.zero(base) if result.allocation is None else result.allocation.total_cost
+        ),
+        "sensitivity_im": lambda: result.sensitivity_margin.total_margin,
+        "schedule_im": lambda: result.initial_margin.initial_margin,
+    }
+    reader = readers.get(metric_id)
+    if reader is None:
+        raise KeyError(f"Unknown comparison metric '{metric_id}'.")
+    return reader()
+
+
+#: Metrics that only exist once the optimizer has run. When no Delivery Amount is
+#: due the optimizer is not invoked at all, and reporting these as ``0.00`` would
+#: say "no collateral was available" when the truth is "the question was never
+#: asked". They are marked unavailable instead.
+ALLOCATION_DEPENDENT: frozenset[str] = frozenset(
+    {
+        "eligible_pool",
+        "collateral_market_value",
+        "collateral_post_haircut",
+        "funding_cost",
+    }
+)
+
+
+def _metric_available(result: PipelineResult, metric_id: str) -> bool:
+    if metric_id in ALLOCATION_DEPENDENT:
+        return result.allocation is not None
+    return True
+
+
+def _direction(delta: Decimal) -> str:
+    if delta > 0:
+        return "UP"
+    if delta < 0:
+        return "DOWN"
+    return "FLAT"
+
+
+def threshold_status(result: PipelineResult) -> dict[str, Any]:
+    """Where this run sits against the CSA Threshold.
+
+    Three states, each read from the margin call rather than inferred from a
+    magnitude:
+
+    ``WITHIN``   exposure did not exceed the Threshold, so no Credit Support Amount
+                 arises.
+    ``WARNING``  the Threshold was exceeded but the Minimum Transfer Amount gated the
+                 call, so nothing transfers today.
+    ``BREACHED`` the Threshold was exceeded and a transfer is due.
+    """
+    call = result.margin_call
+    exceeded = call.credit_support_amount.amount > 0
+
+    if not exceeded:
+        state = "WITHIN"
+        message = (
+            "Exposure sits inside the Threshold. No Credit Support Amount arises "
+            "under Paragraph 2(c)."
+        )
+    elif call.gated_by_mta or call.direction.value == "NONE":
+        state = "WARNING"
+        message = (
+            "The Threshold is exceeded, but the resulting amount is below the "
+            "Minimum Transfer Amount. Nothing transfers today."
+        )
+    else:
+        state = "BREACHED"
+        message = "The Threshold is exceeded and a transfer is due under Paragraph 2."
+
+    return {
+        "state": state,
+        "message": message,
+        "exposure": money(call.exposure),
+        "threshold": money(call.threshold),
+        "credit_support_amount": money(call.credit_support_amount),
+        "minimum_transfer_amount": money(call.minimum_transfer_amount),
+        "call_amount": money(call.call_amount),
+        "transferor": call.transferor.value,
+        "gated_by_mta": call.gated_by_mta,
+    }
+
+
+def _allocation_lines(result: PipelineResult) -> dict[str, AllocationLine]:
+    if result.allocation is None:
+        return {}
+    return {line.asset_id: line for line in result.allocation.lines}
+
+
+def serialise_comparison(
+    before: PipelineResult,
+    after: PipelineResult,
+    before_meta: dict[str, Any],
+    after_meta: dict[str, Any],
+) -> dict[str, Any]:
+    """Two deterministic runs, and the exact difference between them.
+
+    Every delta is ``Decimal`` subtraction of two figures the engine computed. No
+    figure here is estimated, interpolated or modelled: the payload reports what
+    changed between two pinned market snapshots and nothing else. Doing the
+    subtraction server-side keeps money arithmetic in ``Decimal`` and gives the UI
+    one source of truth to render.
+    """
+    if before.terms.base_currency != after.terms.base_currency:
+        raise ValueError(
+            "Cannot compare runs in different base currencies: "
+            f"{before.terms.base_currency} and {after.terms.base_currency}."
+        )
+
+    metrics: list[dict[str, Any]] = []
+    for metric_id, label, basis in COMPARISON_METRICS:
+        lhs = _metric_value(before, metric_id)
+        rhs = _metric_value(after, metric_id)
+        lhs_ok = _metric_available(before, metric_id)
+        rhs_ok = _metric_available(after, metric_id)
+        comparable = lhs_ok and rhs_ok
+        delta = rhs - lhs
+        metrics.append(
+            {
+                "id": metric_id,
+                "label": label,
+                "basis": basis,
+                "before": money(lhs),
+                "after": money(rhs),
+                "before_available": lhs_ok,
+                "after_available": rhs_ok,
+                "comparable": comparable,
+                "delta": money(delta) if comparable else None,
+                "direction": _direction(delta.amount) if comparable else "NOT_COMPARABLE",
+                "unavailable_reason": (
+                    ""
+                    if comparable
+                    else (
+                        "No Delivery Amount was due at one of these snapshots, so the "
+                        "optimizer was never invoked. There is no figure to compare, "
+                        "which is not the same as a figure of zero."
+                    )
+                ),
+            }
+        )
+
+    before_lines = _allocation_lines(before)
+    after_lines = _allocation_lines(after)
+    base = after.terms.base_currency
+
+    allocation_rows: list[dict[str, Any]] = []
+    for asset_id in sorted(set(before_lines) | set(after_lines)):
+        lhs_line = before_lines.get(asset_id)
+        rhs_line = after_lines.get(asset_id)
+        reference = rhs_line if rhs_line is not None else lhs_line
+        if reference is None:  # unreachable: the id came from one of the two
+            continue
+        lhs_value = lhs_line.market_value_posted if lhs_line else Money.zero(base)
+        rhs_value = rhs_line.market_value_posted if rhs_line else Money.zero(base)
+        delta = rhs_value - lhs_value
+
+        if lhs_line is None:
+            status = "ADDED"
+        elif rhs_line is None:
+            status = "REMOVED"
+        elif delta.amount > 0:
+            status = "INCREASED"
+        elif delta.amount < 0:
+            status = "DECREASED"
+        else:
+            status = "UNCHANGED"
+
+        allocation_rows.append(
+            {
+                "asset_id": asset_id,
+                "description": reference.description,
+                "asset_class": reference.asset_class.value,
+                "currency": reference.currency.value,
+                "before": money(lhs_value),
+                "after": money(rhs_value),
+                "delta": money(delta),
+                "status": status,
+            }
+        )
+
+    return {
+        "before": {
+            **before_meta,
+            "run_id": before.run_id,
+            "snapshot_id": before.snapshot.snapshot_id,
+            "snapshot_label": before.snapshot.label,
+            "as_of": before.snapshot.as_of.isoformat(),
+            "decision": before.decision.action,
+            "transferor": before.margin_call.transferor.value,
+            "threshold_status": threshold_status(before),
+            "asset_count": len(before_lines),
+        },
+        "after": {
+            **after_meta,
+            "run_id": after.run_id,
+            "snapshot_id": after.snapshot.snapshot_id,
+            "snapshot_label": after.snapshot.label,
+            "as_of": after.snapshot.as_of.isoformat(),
+            "decision": after.decision.action,
+            "transferor": after.margin_call.transferor.value,
+            "threshold_status": threshold_status(after),
+            "asset_count": len(after_lines),
+        },
+        "base_currency": base.value,
+        "engine_version": after.margin_call.engine_version,
+        "metrics": metrics,
+        "allocation_delta": allocation_rows,
+        "transferor_changed": (before.margin_call.transferor != after.margin_call.transferor),
+        "method": (
+            "Two independent deterministic runs against two pinned market snapshots. "
+            "Every delta is Decimal subtraction of engine-computed figures. Nothing "
+            "is interpolated, modelled or estimated."
+        ),
+        "simulated": True,
     }

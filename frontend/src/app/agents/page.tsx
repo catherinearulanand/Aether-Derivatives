@@ -2,10 +2,8 @@
 
 import { AgentSwarm, ToolRegistry } from "@/components/AgentSwarm";
 import { Chip, ErrorPanel, Loading, Panel, Stat } from "@/components/primitives";
-import { api } from "@/lib/api";
+import { useCurrentRun } from "@/lib/hooks";
 import type { RunResult } from "@/lib/types";
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 
 /**
  * The swarm, on its own screen.
@@ -15,30 +13,12 @@ import { useState } from "react";
  * separation between the two columns is the architecture.
  */
 export default function AgentsPage() {
-  const [scenarioKey, setScenarioKey] = useState("stress");
-
-  const scenarios = useQuery({ queryKey: ["scenarios"], queryFn: api.scenarios });
-  const run = useQuery({
-    queryKey: ["run", scenarioKey],
-    queryFn: () => api.runScenario(scenarioKey),
-  });
+  // The scenario lives in the session store and is chosen in the shell's bar, so
+  // this screen cannot be looking at a different run from the one beside it.
+  const run = useCurrentRun();
 
   return (
     <div className="p-4 flex flex-col gap-3 max-w-[1600px] mx-auto">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="eyebrow mr-1">Scenario</span>
-        {scenarios.data?.map((scenario) => (
-          <button
-            key={scenario.key}
-            onClick={() => setScenarioKey(scenario.key)}
-            className={scenario.key === scenarioKey ? "primary" : ""}
-            title={scenario.summary}
-          >
-            {scenario.name}
-          </button>
-        ))}
-      </div>
-
       <header className="panel px-4 py-3.5">
         <h1 className="serif m-0 text-[23px] font-bold leading-tight">
           Three agents, one deterministic engine

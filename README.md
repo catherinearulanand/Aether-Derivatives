@@ -68,6 +68,9 @@ Optional, and never on the demo path:
 ```bash
 python scripts/build_csa_pdf.py               # render the CSA to a native PDF
 python scripts/fetch_snapshot.py --dry-run    # ingest real published market data
+
+pip install -e ".[data]"                      # faker + pandas, generation only
+python scripts/generate_reconciliation_data.py  # rebuild the reconciliation dataset
 ```
 
 Or start the two processes yourself:
@@ -210,6 +213,24 @@ Three tests carry more weight than the rest:
 fails the build on a forbidden import, an implicit clock, or module-level mutable
 state. The deterministic-core rule is enforced by CI, not by discipline.
 
+Two claims live in the frontend and are checked there, against the modules the
+application actually imports rather than against a copy:
+
+```bash
+node scripts/verify_assistant.mjs        # needs the API up on :8000
+node scripts/verify_reconciliation.mjs
+```
+
+- **`verify_assistant.mjs`** asserts that every monetary figure the assistant returns
+  is character-for-character a string the engine put in the same response the screens
+  render — not "close to", the same string. It also checks that an unsupported
+  question returns `UNKNOWN` rather than a confident paragraph. If the assistant could
+  disagree with the dashboard, the product's central claim would be unfalsifiable.
+- **`verify_reconciliation.mjs`** scores the reconciliation classifier against
+  `fixtures/reconciliation/injection_manifest.json`, the answer key the generator
+  writes. Missed breaks and false positives are both measured. A within-tolerance
+  price wobble raised as a break counts as a false positive, not a catch.
+
 ---
 
 ## Layout
@@ -221,7 +242,9 @@ backend/aether/api/       Thin FastAPI routers. No business logic.
 backend/aether/pipeline.py  Orchestration.
 frontend/                 Next.js 16, App Router, TypeScript strict.
 fixtures/                 Simulated data. Every file carries a provenance block.
+fixtures/reconciliation/  Generated ledger pair + the injected-break answer key.
 scripts/                  verify_env · run_pipeline · dev · build_docs_pdf
+                          generate_reconciliation_data · verify_assistant · verify_reconciliation
 docs/                     Architecture, test strategy, demo script.
 ```
 

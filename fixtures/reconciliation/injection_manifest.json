@@ -1,0 +1,406 @@
+{
+  "_provenance": {
+    "simulated": true,
+    "authored": "2026-08-21",
+    "basis": "Synthetic. Position structure modelled on a tri-party collateral safekeeping statement; break classes modelled on the standard collateral reconciliation exception types.",
+    "generator": "scripts/generate_reconciliation_data.py",
+    "seed": 20260817,
+    "warning": "SIMULATED DATA - not real institutional data.",
+    "identifiers": "Asset identifiers are ISIN-shaped and are not real ISINs. Custodian names, BICs, account numbers, counterparties and staff names are invented."
+  },
+  "as_of": "2026-08-17",
+  "tolerance_bps": "5",
+  "tolerance_note": "A market value difference at or below this tolerance is a rounding or vendor-pricing artefact and reconciles as MATCHED. Above it, the row is a break. Injected PRICE_NOISE_WITHIN_TOLERANCE rows exist to prove the tolerance is applied rather than ignored.",
+  "internal_rows": 148,
+  "external_rows": 149,
+  "injected_differences": 26,
+  "injected_exceptions": 14,
+  "exception_rate": 0.0946,
+  "noise_rate": 0.0811,
+  "rate_note": "Two rates, deliberately separated. exception_rate is what a reconciliation should raise. noise_rate is within-tolerance price disagreement that it should absorb silently. A single blended figure would flatter any engine that raises everything.",
+  "injection_classes": [
+    {
+      "code": "PRICE_NOISE_WITHIN_TOLERANCE",
+      "label": "Valuation difference inside tolerance",
+      "rate": 0.088,
+      "mechanic": "Custodian price moved by 1-4 basis points against the internal mark. Two vendors pricing the same bond will not agree to the last cent.",
+      "expected_outcome": "MATCHED. The difference is at or below the 5 bp tolerance and must not be raised as a break.",
+      "planned_rows": 13,
+      "injected_rows": 12
+    },
+    {
+      "code": "VALUATION_BREAK",
+      "label": "Valuation difference outside tolerance",
+      "rate": 0.018,
+      "mechanic": "Custodian price moved by 40-350 basis points. Typically a stale vendor feed or a disputed mark on an illiquid line.",
+      "expected_outcome": "MISMATCH on market value. Must be raised.",
+      "planned_rows": 3,
+      "injected_rows": 3
+    },
+    {
+      "code": "QUANTITY_BREAK",
+      "label": "Nominal difference",
+      "rate": 0.012,
+      "mechanic": "Custodian nominal is 55-95% of the internal nominal — a partial settlement where only part of the delivery reached the account.",
+      "expected_outcome": "MISMATCH on nominal and market value. Must be raised.",
+      "planned_rows": 2,
+      "injected_rows": 2
+    },
+    {
+      "code": "MISSING_EXTERNAL",
+      "label": "Present internally, absent at the custodian",
+      "rate": 0.016,
+      "mechanic": "Row removed from the custodian statement. The classic settlement-in-flight break: the bank has booked a delivery the custodian has not yet received.",
+      "expected_outcome": "MISSING_EXTERNAL. Must be raised and aged.",
+      "planned_rows": 2,
+      "injected_rows": 2
+    },
+    {
+      "code": "STALE_PRICE",
+      "label": "Custodian priced as of the prior business day",
+      "rate": 0.012,
+      "mechanic": "Custodian row carries the previous day's price and a price_as_of of T-1. The size of the resulting difference depends on the asset class's daily volatility, so some stale marks fall inside tolerance and some do not — which is exactly the ambiguity a real screen must handle.",
+      "expected_outcome": "MISMATCH where the move exceeds tolerance, MATCHED where it does not. price_as_of is the evidence either way.",
+      "planned_rows": 2,
+      "injected_rows": 2
+    },
+    {
+      "code": "ACCOUNT_MISDIRECTION",
+      "label": "Booked to a sibling safekeeping account",
+      "rate": 0.008,
+      "mechanic": "Custodian booked the position to a different account at the same custodian. Benign as a keying error; the shape of a misappropriation if it is not.",
+      "expected_outcome": "MISSING_EXTERNAL on the expected account and MISSING_INTERNAL on the receiving account. A reconciliation that nets these two into 'matched' has hidden the finding.",
+      "planned_rows": 1,
+      "injected_rows": 1
+    },
+    {
+      "code": "CURRENCY_MISLABEL",
+      "label": "Currency code disagrees",
+      "rate": 0.006,
+      "mechanic": "Custodian reports the position in a different currency code while the amount is unchanged. An edge case that breaks naive comparison, because the numbers match and the values do not.",
+      "expected_outcome": "MISMATCH. Comparing amounts without comparing currency is the defect this case exists to catch.",
+      "planned_rows": 1,
+      "injected_rows": 1
+    },
+    {
+      "code": "MISSING_INTERNAL",
+      "label": "Present at the custodian, absent internally",
+      "rate": 0.0203,
+      "mechanic": "3 custodian rows added on accounts the internal ledger does not carry - an unexpected receipt.",
+      "expected_outcome": "MISSING_INTERNAL. Must be raised.",
+      "planned_rows": 3,
+      "injected_rows": 3
+    }
+  ],
+  "matching_key": [
+    "safekeeping_account",
+    "asset_id"
+  ],
+  "matching_note": "Account plus asset is the natural key a collateral team reconciles on. It is deliberately not position_id: the custodian has never seen the bank's internal position identifier, which is what makes the ACCOUNT_MISDIRECTION case detectable at all.",
+  "planned_vs_injected": "planned_rows is how many positions each class was applied to. injected_rows is how many produced an observable difference. They differ where a price move landed on a zero-nominal position, which values at zero on both sides: no difference exists, so none is claimed in the answer key.",
+  "edge_cases": [
+    "Zero-nominal positions, fully returned or amortised.",
+    "Odd lots with fractional nominals, left by partial returns.",
+    "A three-currency book: USD, EUR and INR amounts are not summable without an FX conversion, and the reconciliation does not perform one.",
+    "Uneven custodian concentration - one custodian holds most of the book."
+  ],
+  "scoring": "Treat 'breaks' below as ground truth. Precision and recall over the raised exceptions measure a reconciliation engine; a row listed as PRICE_NOISE_WITHIN_TOLERANCE that is raised as a break is a false positive, not a catch.",
+  "breaks": [
+    {
+      "position_id": "AE-POS-00001",
+      "injection": "PRICE_NOISE_WITHIN_TOLERANCE",
+      "asset_id": "US0000T6M01",
+      "safekeeping_account": "SAFE-03-00001",
+      "detail": "Vendor price disagreement of 1-4 bp.",
+      "internal_market_value": "499451.00",
+      "external_market_value": "499561.88",
+      "difference": "-110.88",
+      "extra": {}
+    },
+    {
+      "position_id": "AE-POS-00019",
+      "injection": "PRICE_NOISE_WITHIN_TOLERANCE",
+      "asset_id": "US0000C4Y07",
+      "safekeeping_account": "SAFE-01-00019",
+      "detail": "Vendor price disagreement of 1-4 bp.",
+      "internal_market_value": "3928520.00",
+      "external_market_value": "3929486.42",
+      "difference": "-966.42",
+      "extra": {}
+    },
+    {
+      "position_id": "AE-POS-00027",
+      "injection": "PRICE_NOISE_WITHIN_TOLERANCE",
+      "asset_id": "CASH-EUR",
+      "safekeeping_account": "SAFE-01-00027",
+      "detail": "Vendor price disagreement of 1-4 bp.",
+      "internal_market_value": "9000000.00",
+      "external_market_value": "9001296.00",
+      "difference": "-1296.00",
+      "extra": {}
+    },
+    {
+      "position_id": "AE-POS-00031",
+      "injection": "VALUATION_BREAK",
+      "asset_id": "US0000E0Y08",
+      "safekeeping_account": "SAFE-01-00031",
+      "detail": "Vendor price disagreement of 40-350 bp.",
+      "internal_market_value": "8957376.00",
+      "external_market_value": "9082940.50",
+      "difference": "-125564.50",
+      "extra": {}
+    },
+    {
+      "position_id": "AE-POS-00044",
+      "injection": "PRICE_NOISE_WITHIN_TOLERANCE",
+      "asset_id": "US0000T7Y03",
+      "safekeeping_account": "SAFE-01-00044",
+      "detail": "Vendor price disagreement of 1-4 bp.",
+      "internal_market_value": "24135.04",
+      "external_market_value": "24140.55",
+      "difference": "-5.51",
+      "extra": {}
+    },
+    {
+      "position_id": "AE-POS-00051",
+      "injection": "VALUATION_BREAK",
+      "asset_id": "US0000C2Y09",
+      "safekeeping_account": "SAFE-04-00051",
+      "detail": "Vendor price disagreement of 40-350 bp.",
+      "internal_market_value": "50427.91",
+      "external_market_value": "51989.26",
+      "difference": "-1561.35",
+      "extra": {}
+    },
+    {
+      "position_id": "AE-POS-00052",
+      "injection": "PRICE_NOISE_WITHIN_TOLERANCE",
+      "asset_id": "US0000C3Y06",
+      "safekeeping_account": "SAFE-01-00052",
+      "detail": "Vendor price disagreement of 1-4 bp.",
+      "internal_market_value": "9068625.00",
+      "external_market_value": "9070747.06",
+      "difference": "-2122.06",
+      "extra": {}
+    },
+    {
+      "position_id": "AE-POS-00053",
+      "injection": "PRICE_NOISE_WITHIN_TOLERANCE",
+      "asset_id": "US0000T7Y03",
+      "safekeeping_account": "SAFE-02-00053",
+      "detail": "Vendor price disagreement of 1-4 bp.",
+      "internal_market_value": "5333251.00",
+      "external_market_value": "5334717.64",
+      "difference": "-1466.64",
+      "extra": {}
+    },
+    {
+      "position_id": "AE-POS-00058",
+      "injection": "CURRENCY_MISLABEL",
+      "asset_id": "DE0000B5Y04",
+      "safekeeping_account": "SAFE-02-00058",
+      "detail": "Custodian reported USD against an internal EUR position.",
+      "internal_market_value": "5569069.00",
+      "external_market_value": "5569069.00",
+      "difference": "0.00",
+      "extra": {
+        "internal_currency": "EUR",
+        "external_currency": "USD"
+      }
+    },
+    {
+      "position_id": "AE-POS-00071",
+      "injection": "MISSING_EXTERNAL",
+      "asset_id": "CASH-EUR",
+      "safekeeping_account": "SAFE-01-00071",
+      "detail": "Row withheld from the custodian statement.",
+      "internal_market_value": "3000000.00",
+      "external_market_value": null,
+      "difference": "3000000.00",
+      "extra": {}
+    },
+    {
+      "position_id": "AE-POS-00074",
+      "injection": "PRICE_NOISE_WITHIN_TOLERANCE",
+      "asset_id": "DE0000B5Y04",
+      "safekeeping_account": "SAFE-03-00074",
+      "detail": "Vendor price disagreement of 1-4 bp.",
+      "internal_market_value": "1016680.00",
+      "external_market_value": "1016951.45",
+      "difference": "-271.45",
+      "extra": {}
+    },
+    {
+      "position_id": "AE-POS-00076",
+      "injection": "ACCOUNT_MISDIRECTION",
+      "asset_id": "XAU-ALLOC-01",
+      "safekeeping_account": "SAFE-03-00076",
+      "detail": "Custodian booked the position to SAFE-03-00576, not SAFE-03-00076.",
+      "internal_market_value": "11028776.00",
+      "external_market_value": "11028776.00",
+      "difference": "0.00",
+      "extra": {
+        "expected_account": "SAFE-03-00076",
+        "actual_account": "SAFE-03-00576"
+      }
+    },
+    {
+      "position_id": "AE-POS-00082",
+      "injection": "PRICE_NOISE_WITHIN_TOLERANCE",
+      "asset_id": "DE0000B5Y04",
+      "safekeeping_account": "SAFE-03-00082",
+      "detail": "Vendor price disagreement of 1-4 bp.",
+      "internal_market_value": "507424.00",
+      "external_market_value": "507238.28",
+      "difference": "185.72",
+      "extra": {}
+    },
+    {
+      "position_id": "AE-POS-00092",
+      "injection": "PRICE_NOISE_WITHIN_TOLERANCE",
+      "asset_id": "IN0000G6Y05",
+      "safekeeping_account": "SAFE-01-00092",
+      "detail": "Vendor price disagreement of 1-4 bp.",
+      "internal_market_value": "1471161.00",
+      "external_market_value": "1471010.94",
+      "difference": "150.06",
+      "extra": {}
+    },
+    {
+      "position_id": "AE-POS-00095",
+      "injection": "PRICE_NOISE_WITHIN_TOLERANCE",
+      "asset_id": "US0000T6M01",
+      "safekeeping_account": "SAFE-02-00095",
+      "detail": "Vendor price disagreement of 1-4 bp.",
+      "internal_market_value": "7448445.00",
+      "external_market_value": "7447044.69",
+      "difference": "1400.31",
+      "extra": {}
+    },
+    {
+      "position_id": "AE-POS-00102",
+      "injection": "STALE_PRICE",
+      "asset_id": "XAU-ALLOC-01",
+      "safekeeping_account": "SAFE-03-00102",
+      "detail": "Custodian carried the prior business day's price.",
+      "internal_market_value": "4876895.00",
+      "external_market_value": "4977675.00",
+      "difference": "-100780.00",
+      "extra": {
+        "price_as_of": "2026-08-16"
+      }
+    },
+    {
+      "position_id": "AE-POS-00123",
+      "injection": "QUANTITY_BREAK",
+      "asset_id": "CASH-USD",
+      "safekeeping_account": "SAFE-01-00123",
+      "detail": "Partial settlement: custodian holds 69.64% of the nominal.",
+      "internal_market_value": "5000000.00",
+      "external_market_value": "3482000.00",
+      "difference": "1518000.00",
+      "extra": {}
+    },
+    {
+      "position_id": "AE-POS-00124",
+      "injection": "STALE_PRICE",
+      "asset_id": "DE0000B5Y04",
+      "safekeeping_account": "SAFE-03-00124",
+      "detail": "Custodian carried the prior business day's price.",
+      "internal_market_value": "2031390.00",
+      "external_market_value": "2033540.00",
+      "difference": "-2150.00",
+      "extra": {
+        "price_as_of": "2026-08-16"
+      }
+    },
+    {
+      "position_id": "AE-POS-00132",
+      "injection": "PRICE_NOISE_WITHIN_TOLERANCE",
+      "asset_id": "DE0000B5Y04",
+      "safekeeping_account": "SAFE-01-00132",
+      "detail": "Vendor price disagreement of 1-4 bp.",
+      "internal_market_value": "7591447.50",
+      "external_market_value": "7588418.51",
+      "difference": "3028.99",
+      "extra": {}
+    },
+    {
+      "position_id": "AE-POS-00133",
+      "injection": "QUANTITY_BREAK",
+      "asset_id": "CASH-EUR",
+      "safekeeping_account": "SAFE-02-00133",
+      "detail": "Partial settlement: custodian holds 93.83% of the nominal.",
+      "internal_market_value": "4750000.00",
+      "external_market_value": "4456925.00",
+      "difference": "293075.00",
+      "extra": {}
+    },
+    {
+      "position_id": "AE-POS-00140",
+      "injection": "PRICE_NOISE_WITHIN_TOLERANCE",
+      "asset_id": "US0000C4Y07",
+      "safekeeping_account": "SAFE-01-00140",
+      "detail": "Vendor price disagreement of 1-4 bp.",
+      "internal_market_value": "10471891.50",
+      "external_market_value": "10467765.57",
+      "difference": "4125.93",
+      "extra": {}
+    },
+    {
+      "position_id": "AE-POS-00146",
+      "injection": "MISSING_EXTERNAL",
+      "asset_id": "US0000C4Y07",
+      "safekeeping_account": "SAFE-03-00146",
+      "detail": "Row withheld from the custodian statement.",
+      "internal_market_value": "0.00",
+      "external_market_value": null,
+      "difference": "0.00",
+      "extra": {}
+    },
+    {
+      "position_id": "AE-POS-00148",
+      "injection": "VALUATION_BREAK",
+      "asset_id": "DE0000B5Y04",
+      "safekeeping_account": "SAFE-01-00148",
+      "detail": "Vendor price disagreement of 40-350 bp.",
+      "internal_market_value": "1526277.00",
+      "external_market_value": "1494531.96",
+      "difference": "31745.04",
+      "extra": {}
+    },
+    {
+      "position_id": "",
+      "injection": "MISSING_INTERNAL",
+      "asset_id": "DE0000B5Y04",
+      "safekeeping_account": "SAFE-03-00900",
+      "detail": "Custodian holds a position the internal ledger does not carry.",
+      "internal_market_value": "0.00",
+      "external_market_value": "2530172.50",
+      "difference": "-2530172.50",
+      "extra": {}
+    },
+    {
+      "position_id": "",
+      "injection": "MISSING_INTERNAL",
+      "asset_id": "US0000C2Y09",
+      "safekeeping_account": "SAFE-04-00901",
+      "detail": "Custodian holds a position the internal ledger does not carry.",
+      "internal_market_value": "0.00",
+      "external_market_value": "1962628.00",
+      "difference": "-1962628.00",
+      "extra": {}
+    },
+    {
+      "position_id": "",
+      "injection": "MISSING_INTERNAL",
+      "asset_id": "US0000T3Y02",
+      "safekeeping_account": "SAFE-04-00902",
+      "detail": "Custodian holds a position the internal ledger does not carry.",
+      "internal_market_value": "0.00",
+      "external_market_value": "4412641.50",
+      "difference": "-4412641.50",
+      "extra": {}
+    }
+  ]
+}

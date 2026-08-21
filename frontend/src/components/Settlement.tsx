@@ -117,13 +117,13 @@ export function Settlement({ settlement }: { settlement: SettlementInstruction |
             <table className="grid">
               <thead>
                 <tr>
-                  <th className="num">#</th>
-                  <th>Asset</th>
-                  <th>Ccy</th>
-                  <th className="num">Market value</th>
-                  <th className="num">Valuation</th>
-                  <th className="num">Collateral value</th>
-                  <th>Account</th>
+                  <th scope="col" className="num">#</th>
+                  <th scope="col">Asset</th>
+                  <th scope="col">Ccy</th>
+                  <th scope="col" className="num">Market value</th>
+                  <th scope="col" className="num">Valuation</th>
+                  <th scope="col" className="num">Collateral value</th>
+                  <th scope="col">Account</th>
                 </tr>
               </thead>
               <tbody>

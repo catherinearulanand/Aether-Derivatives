@@ -27,8 +27,10 @@ export default function MethodologyPage() {
   return (
     <div className="p-4 max-w-[1200px] mx-auto flex flex-col gap-3">
       <div>
-        <div className="eyebrow">How this works and what it does not do</div>
         <h1 className="serif m-0 text-[24px] font-bold leading-tight">Methodology</h1>
+        <p className="m-0 mt-1 text-[12.5px]" style={{ color: "var(--ink-mute)" }}>
+          What this system models, what it deliberately does not, and what it will never claim.
+        </p>
       </div>
 
       {methodology.isLoading && <Loading label="Loading" />}
@@ -36,8 +38,7 @@ export default function MethodologyPage() {
 
       {methodology.data && (
         <>
-          <section className="panel px-5 py-4" style={{ borderLeft: "3px solid var(--accent)" }}>
-            <div className="eyebrow mb-1.5">Core principle</div>
+          <section className="panel panel-accent px-5 py-4">
             <p
               className="serif m-0 text-[21px] leading-snug font-bold"
               style={{ color: "var(--ink)" }}
@@ -142,8 +143,8 @@ export default function MethodologyPage() {
             <table className="grid">
               <thead>
                 <tr>
-                  <th style={{ width: 220 }}>Not claimed</th>
-                  <th>What is true instead</th>
+                  <th scope="col" style={{ width: 220 }}>Not claimed</th>
+                  <th scope="col">What is true instead</th>
                 </tr>
               </thead>
               <tbody>

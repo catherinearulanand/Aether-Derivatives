@@ -10,6 +10,7 @@ HTTP surface.
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 import time
 from collections.abc import AsyncIterator
@@ -30,13 +31,18 @@ from aether.agents.legal_clause import (
 from aether.agents.orchestrator import legal_clause_stage
 from aether.agents.review import ReviewRequired, confirm_field, freeze_terms, pending_summary
 from aether.agents.schema import ExtractionResult
-from aether.api.serializers import serialise_agreement, serialise_run
+from aether.api.serializers import (
+    serialise_agreement,
+    serialise_comparison,
+    serialise_run,
+    threshold_status,
+)
 from aether.config import get_settings, install_tls_trust
-from aether.core.audit import AuditChain
+from aether.core.audit import ActorType, AuditChain
 from aether.core.csa_terms import CSATerms
 from aether.core.money import Currency, Money
 from aether.fixtures.loader import load_agreement, load_inventory, load_portfolio, load_snapshots
-from aether.pipeline import run_scenario
+from aether.pipeline import PipelineResult, run_scenario
 
 SCENARIOS: dict[str, dict[str, Any]] = {
     "base": {
@@ -100,6 +106,16 @@ _extractions: dict[str, ExtractionResult] = {}
 #: decision would be recorded and then ignored, which is the opposite of the claim
 #: this product makes.
 _agreements: dict[str, CSATerms] = {}
+
+#: Human approvals, keyed by scenario. An approval is an **input to the run**:
+#: the run endpoint replays it into the hash chain with the timestamp recorded
+#: when the approver acted, so re-running reproduces the same chain byte for
+#: byte. Nothing here executes a transfer.
+_approvals: dict[str, dict[str, Any]] = {}
+
+#: Which roles may sign off a margin decision. LEGAL reviews contractual terms
+#: and AUDITOR is read-only, so neither appears.
+APPROVER_ROLES: frozenset[str] = frozenset({"RISK", "ADMIN"})
 
 
 # ------------------------------------------------------------- meta
@@ -533,32 +549,86 @@ def list_scenarios() -> dict[str, Any]:
     }
 
 
-@app.post("/api/v1/scenarios/{key}/run", tags=["scenarios"])
-def run(key: str, posted_value: str | None = None) -> dict[str, Any]:
-    """Execute the full deterministic pipeline and return every stage."""
+def _scenario_or_404(key: str) -> dict[str, Any]:
     scenario = SCENARIOS.get(key)
     if scenario is None:
         raise HTTPException(
             status_code=404,
             detail=f"Unknown scenario '{key}'. Available: {sorted(SCENARIOS)}.",
         )
+    return scenario
 
-    posted = None
-    if posted_value:
-        posted = Money.of(posted_value, Currency.USD)
 
-    terms, chain, terms_source = _terms_for_run(scenario["as_of"], f"RUN-{key.upper()}")
+def _execute(key: str, posted: Money | None = None) -> tuple[PipelineResult, str, float]:
+    """Run one scenario end to end and replay any recorded approval into its chain.
+
+    Returns the pipeline result, which agreement governed it, and the wall clock in
+    milliseconds. Both the run endpoint and the comparison endpoint go through here,
+    so the two can never disagree about a figure.
+    """
+    scenario = _scenario_or_404(key)
+    run_id = f"RUN-{key.upper()}"
+    terms, chain, terms_source = _terms_for_run(scenario["as_of"], run_id)
 
     started = time.perf_counter()
     result = run_scenario(
         scenario["snapshot_id"],
         scenario["as_of"],
-        run_id=f"RUN-{key.upper()}",
+        run_id=run_id,
         posted_value=posted,
         terms=terms,
         chain=chain,
     )
     elapsed_ms = (time.perf_counter() - started) * 1000
+
+    result = _apply_approval(key, result)
+    return result, terms_source, elapsed_ms
+
+
+def _apply_approval(key: str, result: PipelineResult) -> PipelineResult:
+    """Extend the run's hash chain with a recorded human approval, if there is one.
+
+    The approval is an **input to the run**, not an afterthought: its timestamp is
+    stored when the approver acts and replayed verbatim here, so re-running the same
+    scenario with the same approval reproduces the same chain, hash for hash. The
+    determinism contract is preserved because nothing reads a clock during the run.
+
+    An approval recorded against a different decision is ignored rather than
+    reattached — a signature on one decision is not a signature on another.
+    """
+    approval = _approvals.get(key)
+    if approval is None:
+        return result
+    if approval["decision_id"] != result.decision.decision_id:
+        return result
+
+    chain = result.audit.append(
+        actor=approval["approver"],
+        actor_type=ActorType.HUMAN,
+        action="DECISION_APPROVED",
+        entity_type="decision",
+        entity_id=result.decision.decision_id,
+        occurred_at=approval["occurred_at"],
+        payload={
+            "approver": approval["approver"],
+            "role": approval["role"],
+            "note": approval["note"],
+            "action_approved": approval["action_approved"],
+            "amount_approved": approval["amount_approved"],
+            "authorises_transfer": False,
+            "note_on_scope": (
+                "Approval is recorded. AETHER executes no transfer and holds no "
+                "settlement connectivity."
+            ),
+        },
+    )
+    return dataclasses.replace(result, audit=chain)
+
+
+def _run_payload(key: str, posted: Money | None = None) -> dict[str, Any]:
+    """The complete run response, including provenance and scenario framing."""
+    scenario = _scenario_or_404(key)
+    result, terms_source, elapsed_ms = _execute(key, posted)
 
     payload = serialise_run(result)
     payload["timing"] = {
@@ -579,7 +649,117 @@ def run(key: str, posted_value: str | None = None) -> dict[str, Any]:
         "argument": scenario["argument"],
     }
     payload["terms_source"] = terms_source
+    payload["threshold_status"] = threshold_status(result)
+    payload["approval"] = _approvals.get(key)
     return payload
+
+
+@app.post("/api/v1/scenarios/{key}/run", tags=["scenarios"])
+def run(key: str, posted_value: str | None = None) -> dict[str, Any]:
+    """Execute the full deterministic pipeline and return every stage."""
+    posted = Money.of(posted_value, Currency.USD) if posted_value else None
+    return _run_payload(key, posted)
+
+
+@app.get("/api/v1/comparison/{before_key}/{after_key}", tags=["scenarios"])
+def comparison(before_key: str, after_key: str) -> dict[str, Any]:
+    """What one market movement did, measured across two pinned snapshots.
+
+    Both sides are full deterministic runs; the deltas are ``Decimal`` subtraction
+    of engine-computed figures. The arithmetic is done here rather than in the
+    browser so money never passes through an IEEE-754 double.
+    """
+    before_meta = _scenario_or_404(before_key)
+    after_meta = _scenario_or_404(after_key)
+
+    if before_meta["as_of"] > after_meta["as_of"]:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"'{before_key}' is as of {before_meta['as_of']}, which is after "
+                f"'{after_key}' at {after_meta['as_of']}. A before/after comparison "
+                "must run forwards in time."
+            ),
+        )
+
+    before, _, _ = _execute(before_key)
+    after, _, _ = _execute(after_key)
+
+    def framing(meta: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "key": meta["key"],
+            "name": meta["name"],
+            "summary": meta["summary"],
+            "argument": meta["argument"],
+        }
+
+    return serialise_comparison(before, after, framing(before_meta), framing(after_meta))
+
+
+@app.post("/api/v1/scenarios/{key}/approve", tags=["scenarios"])
+def approve(
+    key: str,
+    approver: str = Body(..., embed=True),
+    role: str = Body(..., embed=True),
+    note: str = Body("", embed=True),
+    occurred_at: str = Body(..., embed=True),
+) -> dict[str, Any]:
+    """Record a human approval of this run's decision, into the hash chain.
+
+    Approval does not execute anything. AETHER generates instructions and never
+    transmits them; what this endpoint records is that a named person accepted the
+    engine's proposal, which is the gate the product's central claim rests on.
+
+    Only ``RISK`` and ``ADMIN`` may approve. ``LEGAL`` reviews contractual terms and
+    ``AUDITOR`` is read-only, so neither can sign off a transfer.
+    """
+    if role not in APPROVER_ROLES:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                f"Role '{role}' cannot approve a margin decision. "
+                f"Permitted: {sorted(APPROVER_ROLES)}."
+            ),
+        )
+    if not approver.strip():
+        raise HTTPException(status_code=422, detail="An approver must be named.")
+
+    result, _, _ = _execute(key)
+    decision = result.decision
+
+    if not decision.requires_human_approval:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Decision {decision.decision_id} is {decision.status} and does not "
+                "await approval. There is nothing to sign."
+            ),
+        )
+
+    _approvals[key] = {
+        "approver": approver,
+        "role": role,
+        "note": note,
+        "occurred_at": occurred_at,
+        "decision_id": decision.decision_id,
+        "action_approved": decision.action,
+        "amount_approved": str(decision.amount.amount),
+        "currency": decision.amount.currency.value,
+    }
+    return _run_payload(key)
+
+
+@app.delete("/api/v1/scenarios/{key}/approve", tags=["scenarios"])
+def revoke_approval(key: str) -> dict[str, Any]:
+    """Withdraw a recorded approval.
+
+    The chain shortens rather than gaining a reversal event, because in this
+    prototype the approval is a run input rather than an immutable filing. A
+    production system would append a withdrawal and keep both.
+    """
+    _scenario_or_404(key)
+    _approvals.pop(key, None)
+    return _run_payload(key)
 
 
 def _terms_for_run(as_of: date, run_id: str) -> tuple[CSATerms | None, AuditChain | None, str]:

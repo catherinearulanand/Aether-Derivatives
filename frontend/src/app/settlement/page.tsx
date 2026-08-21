@@ -2,9 +2,7 @@
 
 import { Settlement } from "@/components/Settlement";
 import { Chip, ErrorPanel, Loading, Panel } from "@/components/primitives";
-import { api } from "@/lib/api";
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCurrentRun } from "@/lib/hooks";
 
 /**
  * The settlement screen.
@@ -14,31 +12,11 @@ import { useState } from "react";
  * something that looks like a transmissible message.
  */
 export default function SettlementPage() {
-  const [scenarioKey, setScenarioKey] = useState("stress");
-
-  const scenarios = useQuery({ queryKey: ["scenarios"], queryFn: api.scenarios });
-  const run = useQuery({
-    queryKey: ["run", scenarioKey],
-    queryFn: () => api.runScenario(scenarioKey),
-  });
+  const run = useCurrentRun();
 
   return (
     <div className="p-4 flex flex-col gap-3 max-w-[1600px] mx-auto">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="eyebrow mr-1">Scenario</span>
-        {scenarios.data?.map((scenario) => (
-          <button
-            key={scenario.key}
-            onClick={() => setScenarioKey(scenario.key)}
-            className={scenario.key === scenarioKey ? "primary" : ""}
-            title={scenario.summary}
-          >
-            {scenario.name}
-          </button>
-        ))}
-      </div>
-
-      <section className="panel" style={{ borderLeft: "3px solid var(--warn)" }}>
+      <section className="panel panel-warn">
         <div className="px-4 py-3.5">
           <div className="flex items-center gap-2 mb-1.5">
             <Chip tone="warn">Simulated settlement</Chip>
@@ -109,9 +87,9 @@ function MessageReference() {
       <table className="grid">
         <thead>
           <tr>
-            <th style={{ width: 110 }}>Message</th>
-            <th style={{ width: 220 }}>Name</th>
-            <th>Purpose</th>
+            <th scope="col" style={{ width: 110 }}>Message</th>
+            <th scope="col" style={{ width: 220 }}>Name</th>
+            <th scope="col">Purpose</th>
           </tr>
         </thead>
         <tbody>

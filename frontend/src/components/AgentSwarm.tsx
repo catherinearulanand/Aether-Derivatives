@@ -75,11 +75,11 @@ export function AgentSwarm({ agents }: { agents: Agents }) {
         <table className="grid">
           <thead>
             <tr>
-              <th style={{ width: 110 }}>Agent</th>
-              <th style={{ width: 220 }}>Tool called</th>
-              <th>Why it was called</th>
-              <th style={{ width: 260 }}>Arguments passed</th>
-              <th style={{ width: 300 }}>What the engine returned</th>
+              <th scope="col" style={{ width: 110 }}>Agent</th>
+              <th scope="col" style={{ width: 220 }}>Tool called</th>
+              <th scope="col">Why it was called</th>
+              <th scope="col" style={{ width: 260 }}>Arguments passed</th>
+              <th scope="col" style={{ width: 300 }}>What the engine returned</th>
             </tr>
           </thead>
           <tbody>
@@ -152,10 +152,10 @@ export function ToolRegistry({ agents }: { agents: Agents }) {
         <table className="grid">
           <thead>
             <tr>
-              <th style={{ width: 250 }}>Tool</th>
-              <th style={{ width: 130 }}>Owner</th>
-              <th>What it computes</th>
-              <th style={{ width: 220 }}>Accepts</th>
+              <th scope="col" style={{ width: 250 }}>Tool</th>
+              <th scope="col" style={{ width: 130 }}>Owner</th>
+              <th scope="col">What it computes</th>
+              <th scope="col" style={{ width: 220 }}>Accepts</th>
             </tr>
           </thead>
           <tbody>

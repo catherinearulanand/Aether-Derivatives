@@ -156,3 +156,128 @@ export function Empty({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+
+/* ------------------------------------------------------------ status coding */
+
+/**
+ * A threshold status, named as well as coloured.
+ *
+ * Colour alone would fail every reader who cannot separate the three hues, and a
+ * collateral screen is not the place to make that someone else's problem. The
+ * state is always spelled out; the colour is reinforcement.
+ */
+export function StatusPill({
+  state,
+  title,
+}: {
+  state: "WITHIN" | "WARNING" | "BREACHED";
+  title?: string;
+}) {
+  const config = {
+    WITHIN: { label: "Within threshold", className: "status-ok" },
+    WARNING: { label: "Below MTA", className: "status-warn" },
+    BREACHED: { label: "Threshold exceeded", className: "status-crit" },
+  }[state];
+
+  return (
+    <span className={`status-pill ${config.className}`} title={title}>
+      {config.label}
+    </span>
+  );
+}
+
+/** The key, stated once wherever a status appears. */
+export function StatusLegend({ className = "" }: { className?: string }) {
+  const entries: [string, string, string][] = [
+    ["status-ok", "Within threshold", "Exposure is inside the Threshold. No Credit Support Amount arises."],
+    ["status-warn", "Below MTA", "Threshold exceeded, but the amount is under the Minimum Transfer Amount, so nothing transfers today."],
+    ["status-crit", "Threshold exceeded", "A transfer is due under Paragraph 2."],
+  ];
+  return (
+    <div
+      className={`flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[11px] ${className}`}
+      style={{ color: "var(--ink-faint)" }}
+    >
+      <span className="eyebrow">Key</span>
+      {entries.map(([className_, label, hint]) => (
+        <span key={label} className="flex items-center gap-1.5" title={hint}>
+          <span
+            className={className_}
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: "50%",
+              background: "currentColor",
+              display: "inline-block",
+            }}
+          />
+          {label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * A signed change between two engine figures.
+ *
+ * The arrow states the direction and the sign states it again, because on a
+ * collateral screen "up" is not universally good or bad — a rising requirement and
+ * a rising netting benefit point opposite ways for the desk. So this renders
+ * magnitude and direction, and leaves the judgement to the label beside it.
+ */
+export function Delta({
+  value,
+  direction,
+  unavailable,
+}: {
+  value: Money | null;
+  direction: "UP" | "DOWN" | "FLAT" | "NOT_COMPARABLE";
+  unavailable?: string;
+}) {
+  if (direction === "NOT_COMPARABLE" || !value) {
+    return (
+      <span
+        className="delta delta-flat text-[11.5px]"
+        title={unavailable ?? "Not comparable."}
+      >
+        not comparable
+      </span>
+    );
+  }
+
+  const glyph = direction === "UP" ? "▲" : direction === "DOWN" ? "▼" : "—";
+  const tone =
+    direction === "UP" ? "delta-up" : direction === "DOWN" ? "delta-down" : "delta-flat";
+
+  return (
+    <span className={`delta ${tone}`}>
+      <span aria-hidden="true" style={{ fontSize: 9 }}>
+        {glyph}
+      </span>
+      <span className="tnum">{formatMoney(value)}</span>
+    </span>
+  );
+}
+
+/** A row of loading bars that matches the shape of what is coming. */
+export function Skeleton({
+  rows = 3,
+  height = 14,
+}: {
+  rows?: number;
+  height?: number;
+}) {
+  return (
+    <div className="px-4 py-3.5 flex flex-col gap-2" aria-hidden="true">
+      {Array.from({ length: rows }, (_, i) => (
+        <div
+          key={i}
+          className="skeleton"
+          style={{ height, width: `${100 - i * 9}%` }}
+        />
+      ))}
+    </div>
+  );
+}

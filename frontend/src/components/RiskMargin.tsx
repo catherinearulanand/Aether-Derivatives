@@ -97,15 +97,15 @@ export function RiskMargin({
           <table className="grid">
             <thead>
               <tr>
-                <th>Risk factor</th>
-                <th>Class</th>
-                <th className="num" title="PV change for a 1bp curve bump, or a 1% FX move.">
+                <th scope="col">Risk factor</th>
+                <th scope="col">Class</th>
+                <th scope="col" className="num" title="PV change for a 1bp curve bump, or a 1% FX move.">
                   Sensitivity
                 </th>
-                <th className="num" title="AETHER's own risk weight. Not calibrated, not certified.">
+                <th scope="col" className="num" title="AETHER's own risk weight. Not calibrated, not certified.">
                   Weight
                 </th>
-                <th className="num">Weighted</th>
+                <th scope="col" className="num">Weighted</th>
               </tr>
             </thead>
             <tbody>
@@ -133,10 +133,10 @@ export function RiskMargin({
             <table className="grid">
               <thead>
                 <tr>
-                  <th>Bucket</th>
-                  <th className="num">Sensitivities</th>
-                  <th className="num">Weighted sum</th>
-                  <th className="num" title="sqrt(w' R w) — correlated aggregation within the bucket.">
+                  <th scope="col">Bucket</th>
+                  <th scope="col" className="num">Sensitivities</th>
+                  <th scope="col" className="num">Weighted sum</th>
+                  <th scope="col" className="num" title="sqrt(w' R w) — correlated aggregation within the bucket.">
                     Bucket margin
                   </th>
                 </tr>

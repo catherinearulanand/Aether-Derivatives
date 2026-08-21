@@ -69,26 +69,26 @@ export function CrossBorder({ allocation }: { allocation: Allocation | null }) {
         <table className="grid">
           <thead>
             <tr>
-              <th>Asset</th>
-              <th>Ccy</th>
-              <th className="num" title="Rank by headline funding spread. 1 = cheapest on paper.">
+              <th scope="col">Asset</th>
+              <th scope="col">Ccy</th>
+              <th scope="col" className="num" title="Rank by headline funding spread. 1 = cheapest on paper.">
                 Rank: paper
               </th>
-              <th
+              <th scope="col"
                 className="num"
                 title="Rank by cost per effective unit. 1 = genuinely cheapest to deliver."
               >
                 Rank: delivered
               </th>
-              <th className="num">Spread</th>
-              <th className="num" title="Schedule valuation × (1 − FX haircut).">
+              <th scope="col" className="num">Spread</th>
+              <th scope="col" className="num" title="Schedule valuation × (1 − FX haircut).">
                 Effective
               </th>
-              <th className="num">Cost / unit</th>
-              <th className="num" title="The portion of cost/unit caused by the FX haircut alone.">
+              <th scope="col" className="num">Cost / unit</th>
+              <th scope="col" className="num" title="The portion of cost/unit caused by the FX haircut alone.">
                 FX drag
               </th>
-              <th>Outcome</th>
+              <th scope="col">Outcome</th>
             </tr>
           </thead>
           <tbody>

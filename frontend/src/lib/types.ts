@@ -340,6 +340,93 @@ export interface DocumentFormat {
   characters?: number;
 }
 
+// ------------------------------------------------------- threshold & approval
+
+export type ThresholdState = "WITHIN" | "WARNING" | "BREACHED";
+
+export interface ThresholdStatus {
+  state: ThresholdState;
+  message: string;
+  exposure: Money;
+  threshold: Money;
+  credit_support_amount: Money;
+  minimum_transfer_amount: Money;
+  call_amount: Money;
+  transferor: string;
+  gated_by_mta: boolean;
+}
+
+/** A recorded human sign-off. Recording an approval executes nothing. */
+export interface Approval {
+  approver: string;
+  role: string;
+  note: string;
+  occurred_at: string;
+  decision_id: string;
+  action_approved: string;
+  amount_approved: string;
+  currency: string;
+}
+
+// ------------------------------------------------------------- comparison
+
+export type Direction = "UP" | "DOWN" | "FLAT" | "NOT_COMPARABLE";
+
+export interface ComparisonMetric {
+  id: string;
+  label: string;
+  basis: string;
+  before: Money;
+  after: Money;
+  before_available: boolean;
+  after_available: boolean;
+  comparable: boolean;
+  /** Null when the two sides are not comparable — never a stand-in zero. */
+  delta: Money | null;
+  direction: Direction;
+  unavailable_reason: string;
+}
+
+export interface ComparisonSide {
+  key: string;
+  name: string;
+  summary: string;
+  argument: string;
+  run_id: string;
+  snapshot_id: string;
+  snapshot_label: string;
+  as_of: string;
+  decision: string;
+  transferor: string;
+  threshold_status: ThresholdStatus;
+  asset_count: number;
+}
+
+export interface AllocationDeltaRow {
+  asset_id: string;
+  description: string;
+  asset_class: string;
+  currency: string;
+  before: Money;
+  after: Money;
+  delta: Money;
+  status: "ADDED" | "REMOVED" | "INCREASED" | "DECREASED" | "UNCHANGED";
+}
+
+export interface Comparison {
+  before: ComparisonSide;
+  after: ComparisonSide;
+  base_currency: string;
+  engine_version: string;
+  metrics: ComparisonMetric[];
+  allocation_delta: AllocationDeltaRow[];
+  transferor_changed: boolean;
+  method: string;
+  simulated: boolean;
+}
+
+// ---------------------------------------------------------------- run
+
 export interface RunResult {
   run_id: string;
   trace_id: string;
@@ -364,6 +451,9 @@ export interface RunResult {
   scenario?: Scenario;
   terms_source?: string;
   timing?: Timing;
+  threshold_status: ThresholdStatus;
+  /** Null until a permitted role signs the decision. */
+  approval: Approval | null;
 }
 
 // ---------------------------------------------------------------- extraction

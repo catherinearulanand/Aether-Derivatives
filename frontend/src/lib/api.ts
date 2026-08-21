@@ -7,6 +7,7 @@
 
 import type {
   Agreement,
+  Comparison,
   DocumentFormat,
   EvaluationReport,
   Extraction,
@@ -75,6 +76,28 @@ export const api = {
 
   runScenario: (key: string) =>
     request<RunResult>(`/api/v1/scenarios/${key}/run`, { method: "POST" }),
+
+  /**
+   * Two runs and the exact difference between them.
+   *
+   * The subtraction happens in Python with `Decimal`. The browser renders the
+   * result and never computes a money delta itself.
+   */
+  comparison: (before: string, after: string) =>
+    request<Comparison>(`/api/v1/comparison/${before}/${after}`),
+
+  /** Record a human sign-off into the run's hash chain. Executes nothing. */
+  approve: (
+    key: string,
+    body: { approver: string; role: string; note: string; occurred_at: string },
+  ) =>
+    request<RunResult>(`/api/v1/scenarios/${key}/approve`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  revokeApproval: (key: string) =>
+    request<RunResult>(`/api/v1/scenarios/${key}/approve`, { method: "DELETE" }),
 
   document: (id: string) =>
     request<{ document_id: string; text: string }>(`/api/v1/documents/${id}`),

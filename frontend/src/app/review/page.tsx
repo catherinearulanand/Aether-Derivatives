@@ -3,6 +3,9 @@
 import { Chip, ErrorPanel, Loading, Panel, Stat } from "@/components/primitives";
 import { api, ApiError } from "@/lib/api";
 import type { ExtractedField, Extraction } from "@/lib/types";
+import { RoleGuard } from "@/components/RoleGuard";
+import { can } from "@/lib/roles";
+import { useAether } from "@/lib/store";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -21,7 +24,18 @@ const REVIEWER = "collateral.ops@aether.example";
  * were not — the gate is enforced server-side, not by the UI.
  */
 export default function ReviewPage() {
+  return (
+    <RoleGuard permission="view:contract">
+      <Review />
+    </RoleGuard>
+  );
+}
+
+function Review() {
   const client = useQueryClient();
+  const role = useAether((s) => s.role);
+  const identity = useAether((s) => s.identity);
+  const mayReview = can(role, "act:review-contract");
   const [selected, setSelected] = useState<string | null>(null);
   const [frozen, setFrozen] = useState(false);
   const [rationale, setRationale] = useState(
@@ -47,7 +61,7 @@ export default function ReviewPage() {
     mutationFn: (vars: { path: string; value?: unknown }) =>
       api.confirmField(DOCUMENT_ID, {
         path: vars.path,
-        reviewer: REVIEWER,
+        reviewer: identity ?? REVIEWER,
         rationale,
         value: vars.value,
       }),
@@ -66,10 +80,12 @@ export default function ReviewPage() {
     <div className="p-4 max-w-[1700px] mx-auto flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3">
         <div>
-          <div className="eyebrow">Legal-Clause Agent</div>
           <h1 className="serif m-0 text-[24px] font-bold leading-tight">
             Credit Support Annex — {DOCUMENT_ID}
           </h1>
+          <p className="m-0 mt-1 text-[12px]" style={{ color: "var(--ink-mute)" }}>
+            Read by the Legal-Clause Agent. Every value carries a citation.
+          </p>
         </div>
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -101,6 +117,8 @@ export default function ReviewPage() {
           {/* The gate */}
           <FreezeGate
             extraction={extraction.data}
+            mayReview={mayReview}
+            reviewer={identity ?? REVIEWER}
             frozen={frozen}
             rationale={rationale}
             setRationale={setRationale}
@@ -174,6 +192,8 @@ function ExtractionSummary({
 
 function FreezeGate({
   extraction,
+  mayReview,
+  reviewer,
   frozen,
   rationale,
   setRationale,
@@ -184,6 +204,8 @@ function FreezeGate({
   freezeError,
 }: {
   extraction: Extraction;
+  mayReview: boolean;
+  reviewer: string;
   frozen: boolean;
   rationale: string;
   setRationale: (value: string) => void;
@@ -240,14 +262,19 @@ function FreezeGate({
               <div className="flex flex-wrap items-center gap-2.5">
                 <button
                   className="primary"
-                  disabled={confirming || !rationale.trim()}
+                  disabled={!mayReview || confirming || !rationale.trim()}
+                  title={
+                    mayReview
+                      ? undefined
+                      : "Only LEGAL may confirm a contractual term."
+                  }
                   onClick={() => onConfirm(item.path)}
                 >
                   Confirm {item.current_value}
                 </button>
                 {item.alternative && (
                   <button
-                    disabled={confirming || !rationale.trim()}
+                    disabled={!mayReview || confirming || !rationale.trim()}
                     onClick={() =>
                       onConfirm(item.path, {
                         amount: item.alternative!.replace(/[^0-9.]/g, ""),
@@ -260,7 +287,9 @@ function FreezeGate({
                   </button>
                 )}
                 <span className="text-[11px]" style={{ color: "var(--ink-faint)" }}>
-                  Recorded against {REVIEWER}
+                  {mayReview
+                    ? `Recorded against ${reviewer}`
+                    : "Your role may read this review but not decide it. LEGAL owns the contractual interpretation."}
                 </span>
               </div>
             </div>
@@ -271,7 +300,12 @@ function FreezeGate({
           <div className="text-[12.5px]" style={{ color: "var(--ink-mid)" }}>
             Every field is resolved. Terms can be frozen into a computable agreement.
           </div>
-          <button className="primary ml-auto" onClick={onFreeze} disabled={freezing || frozen}>
+          <button
+            className="primary ml-auto"
+            onClick={onFreeze}
+            disabled={!mayReview || freezing || frozen}
+            title={mayReview ? undefined : "Only LEGAL may freeze the agreement."}
+          >
             {frozen ? "Agreement frozen" : "Freeze agreement"}
           </button>
         </div>
@@ -394,10 +428,10 @@ function FieldTable({
         <table className="grid">
           <thead>
             <tr>
-              <th>Field</th>
-              <th>Value</th>
-              <th className="num">Conf.</th>
-              <th>Source</th>
+              <th scope="col">Field</th>
+              <th scope="col">Value</th>
+              <th scope="col" className="num">Conf.</th>
+              <th scope="col">Source</th>
             </tr>
           </thead>
           <tbody>
@@ -415,7 +449,18 @@ function FieldTable({
                 <td>
                   <div className="mono text-[11px]">{field.path}</div>
                   {field.citation && (
-                    <div className="text-[10px]" style={{ color: "var(--ink-faint)" }}>
+                    <div
+                      className="text-[10px]"
+                      style={{
+                        // The selected row sits on a lighter surface, where the
+                        // faintest tone drops under 4.5:1. Selection raises the
+                        // citation with it.
+                        color:
+                          selected === field.path
+                            ? "var(--ink-mute)"
+                            : "var(--ink-faint)",
+                      }}
+                    >
                       p.{field.citation.page} · {field.citation.section}
                     </div>
                   )}

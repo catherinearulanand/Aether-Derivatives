@@ -27,6 +27,12 @@ dev = [
     "hypothesis>=6.165.7",
     "httpx>=0.28.1",
 ]
+# Fixture generation only. Never imported at runtime: the reconciliation dataset is
+# committed as CSV, and scripts/generate_reconciliation_data.py regenerates it.
+data = [
+    "faker>=40.0.0",
+    "pandas>=3.0.0",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]
