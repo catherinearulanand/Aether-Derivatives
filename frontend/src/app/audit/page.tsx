@@ -3,6 +3,7 @@
 import { RoleGuard } from "@/components/RoleGuard";
 import { Chip, ErrorPanel, Panel, Skeleton, Stat } from "@/components/primitives";
 import { buildCsv, downloadFile } from "@/lib/csv";
+import { exportAuditPdf } from "@/lib/pdf";
 import { formatDate } from "@/lib/format";
 import { useCurrentRun } from "@/lib/hooks";
 import { can } from "@/lib/roles";
@@ -20,11 +21,14 @@ import { useState } from "react";
  *
  * .. rubric:: Export
  *
- * Two formats, for two readers. CSV carries every field, including the hashes, for
- * anyone who wants to re-verify the chain in a spreadsheet or a script. The
- * printable report is the same content laid out as a document, produced through
- * the browser's own print-to-PDF rather than by a bundled PDF library — which
- * guarantees that what leaves the building is exactly what was on screen.
+ * Two formats, for two readers. CSV carries every field for anyone re-verifying
+ * the chain in a spreadsheet or a script. The PDF is the same content as a
+ * document a person can file or hand to a supervisor.
+ *
+ * Both are built from the same run object this page renders, so neither can
+ * disagree with what the reviewer was looking at when they exported it. Both
+ * print hashes in full: a truncated hash cannot be used to recompute the chain,
+ * which would make the artefact unverifiable.
  *
  * .. rubric:: The record is not editable here
  *
@@ -78,8 +82,17 @@ function Audit() {
         {run.data && mayExport && (
           <div className="ml-auto flex items-center gap-2 no-print">
             <button onClick={() => exportCsv(run.data!)}>Export CSV</button>
-            <button onClick={() => window.print()} title="Produces a PDF through the browser's own print dialog.">
-              Printable report
+            <button
+              className="primary"
+              onClick={() =>
+                exportAuditPdf(run.data!, {
+                  exportedBy: `${identity ?? "unknown"} (${role ?? "no role"})`,
+                  exportedAt: new Date().toISOString(),
+                })
+              }
+              title="A landscape report carrying every event with its full hash."
+            >
+              Export PDF
             </button>
           </div>
         )}
@@ -262,16 +275,19 @@ function Audit() {
                   </p>
                 </div>
                 <div>
-                  <div className="eyebrow mb-1.5">Printable report</div>
+                  <div className="eyebrow mb-1.5">PDF</div>
                   <p
                     className="m-0 text-[11.5px] leading-relaxed"
                     style={{ color: "var(--ink-mid)" }}
                   >
-                    The same events as a document, headed with the chain
-                    identifier, the head hash, the verification result and who
-                    exported it. Produced through the browser&apos;s print dialog,
-                    so the document is exactly what was displayed — no separate
-                    rendering path that could diverge from the screen.
+                    A landscape document headed with the agreement, snapshot,
+                    chain identifier, head hash, verification result and who
+                    exported it, followed by every event. Hashes are printed
+                    <strong> in full</strong> rather than truncated as they are on
+                    screen — a prefix cannot be used to recompute the chain, and a
+                    report nobody can verify is not an audit artefact. Generated
+                    from the same run object this page renders, so it cannot
+                    disagree with what you were looking at.
                   </p>
                 </div>
               </div>

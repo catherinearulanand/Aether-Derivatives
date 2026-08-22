@@ -551,3 +551,73 @@ export interface Health {
   live_available: boolean;
   simulated_data: boolean;
 }
+
+/* ---------------------------------------------------------------- assistant */
+
+export type AnswerStatus =
+  | "ANSWERED"
+  | "UNAVAILABLE"
+  | "NOT_PERMITTED"
+  | "UNKNOWN";
+
+/**
+ * Why an answer is trustworthy, in one word.
+ *
+ * `OK` — the reply stands as written. `FIGURE_NOT_IN_EVIDENCE` — the model wrote a
+ * number no tool returned, so its answer was discarded and this one was composed
+ * from the evidence instead. `MODEL_UNAVAILABLE` / `MODEL_ERROR` — the agent could
+ * not be reached and the deterministic router answered.
+ */
+export type AssistantGuard =
+  | "OK"
+  | "FIGURE_NOT_IN_EVIDENCE"
+  | "MODEL_UNAVAILABLE"
+  | "MODEL_ERROR";
+
+export interface EvidenceField {
+  label: string;
+  value: string;
+  headline: boolean;
+}
+
+/** What one tool returned. The figures the prose was written from. */
+export interface Evidence {
+  tool: string;
+  status: AnswerStatus;
+  title: string;
+  text: string;
+  fields: EvidenceField[];
+  source: string;
+  href: string | null;
+  paths: string[];
+}
+
+export interface AssistantAction {
+  label: string;
+  href: string;
+}
+
+export interface AssistantAnswer {
+  status: AnswerStatus;
+  /** Prose. Never contains a figure absent from `evidence` — enforced server-side. */
+  reply: string;
+  evidence: Evidence[];
+  actions: AssistantAction[];
+  follow_ups: string[];
+  /** `model` when the agent composed it, `deterministic` when the router did. */
+  route: "model" | "deterministic";
+  guard: AssistantGuard;
+  mode: string;
+  model_id: string | null;
+  prompt_version: string;
+  tool_calls: number;
+  engine_version: string;
+  snapshot_id: string;
+  as_of: string;
+  trace_id: string;
+}
+
+export interface AssistantTurn {
+  role: "user" | "assistant";
+  content: string;
+}

@@ -49,9 +49,8 @@ export function BeforeAfter({ comparison }: { comparison: Comparison }) {
           <SideHeader side={comparison.before} label="Before" />
 
           <div
-            className="flex lg:flex-col items-center justify-center gap-2 px-5 py-4"
+            className="movement-flicker flex lg:flex-col items-center justify-center gap-2 px-5 py-4"
             style={{
-              borderInline: "1px solid var(--rule)",
               background: "var(--surface-2)",
               minWidth: 150,
             }}
@@ -122,14 +121,17 @@ export function BeforeAfter({ comparison }: { comparison: Comparison }) {
                       {metric.basis}
                     </div>
                   </td>
-                  <td className="num" style={{ color: "var(--ink-mid)" }}>
+                  <td
+                    className="num"
+                    style={{ color: "var(--ink-mid)", fontSize: 13.5, fontWeight: 600 }}
+                  >
                     {metric.before_available ? (
                       formatMoney(metric.before)
                     ) : (
                       <span style={{ color: "var(--ink-faint)" }}>not computed</span>
                     )}
                   </td>
-                  <td className="num">
+                  <td className="num" style={{ fontSize: 14, fontWeight: 700 }}>
                     {metric.after_available ? (
                       formatMoney(metric.after)
                     ) : (
@@ -180,7 +182,12 @@ function SideHeader({
       style={emphasise ? { background: "var(--surface-2)" } : undefined}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <span className="eyebrow">{label}</span>
+        <span
+          className="eyebrow"
+          style={{ fontSize: 11.5, fontWeight: 700, color: "var(--accent)" }}
+        >
+          {label}
+        </span>
         <Chip>{side.snapshot_id}</Chip>
         <span className="text-[11px]" style={{ color: "var(--ink-faint)" }}>
           {formatDate(side.as_of)}
@@ -189,7 +196,7 @@ function SideHeader({
 
       <h3
         className="serif m-0 leading-tight"
-        style={{ fontSize: 18, fontWeight: 700 }}
+        style={{ fontSize: 20, fontWeight: 700 }}
       >
         {side.snapshot_label}
       </h3>
@@ -226,16 +233,16 @@ function HeadlineMetric({ metric }: { metric: ComparisonMetric }) {
       <div className="flex items-baseline gap-2 flex-wrap">
         <span
           className="tnum"
-          style={{ fontSize: 12.5, color: "var(--ink-faint)" }}
+          style={{ fontSize: 15, fontWeight: 600, color: "var(--ink-mute)" }}
         >
           {metric.before_available ? formatMoney(metric.before) : "—"}
         </span>
-        <span className="mono" style={{ color: "var(--ink-faint)", fontSize: 10 }}>
+        <span className="mono" style={{ color: "var(--ink-faint)", fontSize: 11 }}>
           →
         </span>
         <span
-          className="tnum font-semibold"
-          style={{ fontSize: 17, overflowWrap: "anywhere" }}
+          className="tnum"
+          style={{ fontSize: 20, fontWeight: 700, overflowWrap: "anywhere" }}
         >
           {metric.after_available ? formatMoney(metric.after) : "—"}
         </span>

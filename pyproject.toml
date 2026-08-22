@@ -19,6 +19,7 @@ dependencies = [
     "pypdf>=6.16.1",          # native PDF text-layer ingestion
     "truststore>=0.10.4",     # required on TLS-intercepted networks
     "certifi>=2026.2.25",
+    "mangum>=0.19.0",       # ASGI -> Lambda adapter. Deploy only; unused locally.
 ]
 
 [project.optional-dependencies]
@@ -90,6 +91,9 @@ max-branches = 16
 # PLC0415: the anthropic SDK is imported only on the live path and pypdf only on
 # the PDF path, so replay-from-markdown depends on neither.
 "backend/aether/agents/legal_clause.py" = ["PLC0415"]
+# PLC0415: the anthropic SDK is imported only inside the live agent loop, so the
+# replay path — the demo path — never imports it.
+"backend/aether/agents/guide.py" = ["PLC0415"]
 # N818: `except ReviewRequired` reads better than `except ReviewRequiredError`, and
 # the name states a condition rather than a malfunction.
 "backend/aether/agents/review.py" = ["N818"]

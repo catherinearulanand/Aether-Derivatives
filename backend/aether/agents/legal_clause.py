@@ -42,6 +42,7 @@ from aether.agents.schema import (
     ReviewReason,
 )
 from aether.config import Mode, Settings, get_settings, install_tls_trust
+from aether.governance.sanitise import sanitise_document
 
 __all__ = [
     "CONFIDENCE_THRESHOLD",
@@ -234,12 +235,18 @@ def _extract_live(document_id: str, text: str, settings: Settings) -> Extraction
     client = Anthropic(api_key=settings.api_key)
     started = time.monotonic()
 
+    # The document is delivered inside a per-document boundary derived from its
+    # own content hash, so text inside it cannot forge a closing marker to break
+    # out. Detections are reported, never stripped: removing them would destroy
+    # the evidence and change the hash the audit chain is anchored to.
+    prepared = sanitise_document(document_id, text)
+
     message = client.messages.create(
         model=settings.model_id,
         max_tokens=8192,
         temperature=0.0,
         system=EXTRACTION_PROMPT,
-        messages=[{"role": "user", "content": text}],
+        messages=[{"role": "user", "content": prepared.framed}],
     )
     latency_ms = int((time.monotonic() - started) * 1000)
 

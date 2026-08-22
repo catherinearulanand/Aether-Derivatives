@@ -7,6 +7,8 @@
 
 import type {
   Agreement,
+  AssistantAnswer,
+  AssistantTurn,
   Comparison,
   DocumentFormat,
   EvaluationReport,
@@ -132,4 +134,30 @@ export const api = {
 
   evaluation: (id: string) =>
     request<EvaluationReport>(`/api/v1/documents/${id}/evaluation`),
+
+  /**
+   * Ask the assistant.
+   *
+   * The agent runs server-side, which is not an implementation detail: the model
+   * key never reaches the browser, and every figure in the answer is retrieved by a
+   * tool over the same deterministic run the panels render. A reply that names a
+   * figure no tool returned is rejected before this promise resolves.
+   */
+  assistantChat: (body: {
+    question: string;
+    scenario_key: string;
+    baseline_key: string;
+    role: string | null;
+    history: AssistantTurn[];
+  }) =>
+    request<AssistantAnswer>("/api/v1/assistant/chat", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  /** Opening questions this role can actually be told the answer to. */
+  assistantSuggestions: (role: string | null) =>
+    request<{ suggestions: string[]; mode: string; model_id: string | null }>(
+      `/api/v1/assistant/suggestions${role ? `?role=${role}` : ""}`,
+    ),
 };

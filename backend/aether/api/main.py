@@ -22,6 +22,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 from aether.agents.evaluation import evaluate_extraction
+from aether.agents.guide import GuideAnswer, GuideContext, starters
+from aether.agents.guide import answer as guide_answer
 from aether.agents.legal_clause import (
     CONFIDENCE_THRESHOLD,
     ExtractionError,
@@ -823,3 +825,131 @@ async def stream(key: str) -> StreamingResponse:
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+# ------------------------------------------------------------- assistant
+
+
+def _guide_context(
+    key: str, baseline_key: str, role: str | None
+) -> tuple[GuideContext, dict[str, Any]]:
+    """Assemble what the assistant may read: one real run, and its baseline.
+
+    The run is produced by the same ``_run_payload`` the dashboard calls, so the
+    assistant is answering from the identical bytes the panels render rather than
+    from a second, parallel view of the data.
+    """
+    run = _run_payload(key)
+
+    comparison_payload: dict[str, Any] | None = None
+    if baseline_key and baseline_key != key:
+        before_meta = SCENARIOS.get(baseline_key)
+        after_meta = SCENARIOS.get(key)
+        if before_meta and after_meta and before_meta["as_of"] <= after_meta["as_of"]:
+            before, _, _ = _execute(baseline_key)
+            after, _, _ = _execute(key)
+            comparison_payload = serialise_comparison(
+                before, after, dict(before_meta), dict(after_meta)
+            )
+
+    pending = 0
+    for extraction in _extractions.values():
+        pending += len(pending_summary(extraction))
+
+    context = GuideContext(
+        run=run,
+        comparison=comparison_payload,
+        role=role,
+        scenario_name=str(SCENARIOS.get(key, {}).get("name", key)),
+        baseline_name=str(SCENARIOS.get(baseline_key, {}).get("name", baseline_key)),
+        pending_review=pending,
+    )
+    return context, run
+
+
+def _serialise_guide_answer(answer: GuideAnswer, run: dict[str, Any]) -> dict[str, Any]:
+    """The assistant's turn, with the provenance every computed figure must carry."""
+    return {
+        "status": answer.status,
+        "reply": answer.reply,
+        "evidence": [
+            {
+                "tool": item.tool,
+                "status": item.status,
+                "title": item.title,
+                "text": item.text,
+                "fields": [
+                    {"label": f.label, "value": f.value, "headline": f.headline}
+                    for f in item.fields
+                ],
+                "source": item.source,
+                "href": item.href,
+                "paths": list(item.paths),
+            }
+            for item in answer.evidence
+        ],
+        "actions": [{"label": label, "href": href} for label, href in answer.actions],
+        "follow_ups": list(answer.follow_ups),
+        "route": answer.route,
+        "guard": answer.guard,
+        "mode": settings.mode.value,
+        "model_id": answer.model_id,
+        "prompt_version": answer.prompt_version,
+        "tool_calls": answer.tool_calls,
+        # The reproducibility contract: this payload carries engine figures.
+        "engine_version": run["engine_version"],
+        "snapshot_id": run["snapshot"]["snapshot_id"],
+        "as_of": run["as_of"],
+        "trace_id": run["trace_id"],
+    }
+
+
+@app.get("/api/v1/assistant/suggestions", tags=["assistant"])
+def assistant_suggestions(role: str | None = None) -> dict[str, Any]:
+    """Opening questions worth asking, filtered to what this role can be told.
+
+    Served from the same route table the assistant answers with, so a suggestion can
+    never be offered that the assistant would then refuse.
+    """
+    context = GuideContext(
+        run={},
+        comparison=None,
+        role=role,
+        scenario_name="",
+        baseline_name="",
+    )
+    return {
+        "role": role,
+        "mode": settings.mode.value,
+        "model_id": settings.model_id if settings.live_available else None,
+        "suggestions": list(starters(context)),
+    }
+
+
+@app.post("/api/v1/assistant/chat", tags=["assistant"])
+def assistant_chat(
+    question: str = Body(..., embed=True),
+    scenario_key: str = Body(..., embed=True),
+    baseline_key: str = Body("", embed=True),
+    role: str | None = Body(None, embed=True),
+    history: list[dict[str, str]] = Body(default_factory=list, embed=True),
+) -> dict[str, Any]:
+    """Ask the assistant about the run on screen, or about the application itself.
+
+    In ``replay`` mode a keyword router answers. In ``live`` mode the agent decides
+    which tools to call and writes the prose between them. Either way the figures
+    come from the same deterministic tools, and a live reply containing a figure no
+    tool returned is discarded before it reaches this response — the ``guard`` field
+    reports when that happened.
+    """
+    _scenario_or_404(scenario_key)
+
+    turns: list[tuple[str, str]] = [
+        (str(turn.get("role", "user")), str(turn.get("content", "")))
+        for turn in history
+        if turn.get("content") and turn.get("role") in {"user", "assistant"}
+    ]
+
+    context, run = _guide_context(scenario_key, baseline_key, role)
+    result = guide_answer(question, context, settings, tuple(turns[-8:]))
+    return _serialise_guide_answer(result, run)

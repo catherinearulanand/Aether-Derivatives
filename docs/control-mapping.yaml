@@ -1,0 +1,322 @@
+# AETHER control mapping
+#
+# WHAT THIS IS
+#   A register of the technical controls implemented in this repository, each
+#   pointing at the code that enforces it and the test that proves it.
+#
+# WHAT THIS IS NOT
+#   A compliance claim. No entry here asserts that AETHER is compliant with,
+#   approved by, or certified against any regulation. The `requirement` field is
+#   deliberately left as a generic control objective rather than a citation to a
+#   specific rule: mapping a control to a jurisdiction's requirement is a legal
+#   judgement, and this file is written to be filled in by somebody with the
+#   authority to make it.
+#
+#   AETHER is designed to support supervised AI governance, auditability, model
+#   governance, human oversight and regulatory review. Whether that design meets
+#   a given obligation is a question for a reviewer, not for a YAML file.
+#
+# HOW TO USE IT
+#   A reviewer adds `jurisdiction_mapping` entries under any control, naming the
+#   rule they believe it addresses and their reasoning. Those additions are
+#   theirs, and are kept separate from the `implementation` and `evidence`
+#   fields, which are statements of fact about the code and are asserted here.
+#
+# STATUS VOCABULARY
+#   IMPLEMENTED               enforced in code, covered by a passing test
+#   PARTIALLY_IMPLEMENTED     enforced for some paths, gaps named below
+#   ARCHITECTURALLY_PREPARED  the boundary exists; the enforcement does not
+#   NOT_IMPLEMENTED           named so it is not mistaken for present
+
+schema_version: control-mapping/v1
+generated_for: AETHER Derivatives
+disclaimer: >-
+  All data in this system is simulated. No regulatory approval, certification or
+  compliance is claimed. Controls below are technical measures, not legal
+  conclusions.
+
+controls:
+
+  - id: AE-AI-01
+    requirement: >-
+      AI output must be attributable to a specific model, version and governing
+      policy, and that attribution must survive the model being replaced.
+    aether_control: AI model registry with per-output attribution.
+    implementation: backend/aether/governance/registry.py
+    evidence:
+      - backend/tests/security/test_governance.py::TestModelRegistry
+      - "Attribution.as_payload() is carried into the audit chain and evidence pack"
+    status: PARTIALLY_IMPLEMENTED
+    gap: >-
+      The registry and attribution exist and are tested. Attribution is not yet
+      stamped onto every extraction at the call site, so a historical extraction
+      does not yet carry its card. See AE-AI-02.
+    responsible_owner: TBD - model risk
+    testing_frequency: every commit
+
+  - id: AE-AI-02
+    requirement: >-
+      A model update must not silently replace its predecessor; promotion passes
+      through evaluation, security testing, regression testing and approval.
+    aether_control: Ordered promotion path; resolve() refuses anything not DEPLOYED.
+    implementation: backend/aether/governance/registry.py (PROMOTION_PATH, promote)
+    evidence:
+      - "test_promotion_cannot_skip_a_step"
+      - "test_promotion_requires_a_named_approver"
+      - "test_undeployed_model_is_refused"
+    status: IMPLEMENTED
+    gap: >-
+      Promotion state is held in a module constant, so a promotion is a code
+      change rather than an operational action. Persisting the registry is
+      required before this is usable outside a demo.
+    responsible_owner: TBD - model risk
+    testing_frequency: every commit
+
+  - id: AE-AI-03
+    requirement: >-
+      Document content supplied by a counterparty must be treated as data and
+      must never be executed as instruction.
+    aether_control: >-
+      Content-hash-derived boundary framing, adversarial pattern detection,
+      hidden-character detection, and a system prompt that names the boundary.
+    implementation:
+      - backend/aether/governance/sanitise.py
+      - backend/aether/agents/prompts.py (EXTRACTION_PROMPT, legal-clause/v2)
+      - backend/aether/agents/legal_clause.py (live call sends framed content)
+    evidence:
+      - backend/tests/security/test_prompt_injection.py
+    status: PARTIALLY_IMPLEMENTED
+    gap: >-
+      Pattern detection is a heuristic and is evadable by construction. The
+      controls that actually stop a bad extraction reaching a payment are the
+      citation requirement, the confidence threshold, the freeze gate and the
+      deterministic recomputation - see AE-HS-01. Detections are not yet surfaced
+      on the extraction payload or written to the audit chain.
+    responsible_owner: TBD - security
+    testing_frequency: every commit
+
+  - id: AE-AB-01
+    requirement: >-
+      Each component may perform only the actions its role permits, enforced at
+      the service layer rather than the interface.
+    aether_control: Capability matrix, deny by default.
+    implementation: backend/aether/governance/authority.py
+    evidence:
+      - backend/tests/security/test_governance.py::TestAuthorityBoundary
+      - "test_no_ai_actor_can_authorise_anything"
+      - "test_nobody_can_execute_settlement"
+    status: ARCHITECTURALLY_PREPARED
+    gap: >-
+      The matrix and its enforcement function are implemented and tested. They
+      are NOT yet called from the API routers, so the resource endpoints remain
+      unauthorised. This is the single largest outstanding item.
+    responsible_owner: TBD - platform
+    testing_frequency: every commit
+
+  - id: AE-AB-02
+    requirement: >-
+      An AI component must not pass a value that becomes an authoritative
+      financial figure.
+    aether_control: >-
+      Tool call arguments are typed str | int | bool | None; a Decimal, float or
+      Money is rejected at construction.
+    implementation: backend/aether/agents/orchestrator.py (Argument)
+    evidence:
+      - backend/tests/unit/test_orchestrator.py::test_rejects_anything_that_is_not_a_reference
+    status: IMPLEMENTED
+    gap: null
+    responsible_owner: TBD - platform
+    testing_frequency: every commit
+
+  - id: AE-HS-01
+    requirement: >-
+      Unresolved or high-risk contractual interpretations must prevent downstream
+      calculation, enforced by the backend rather than displayed by the UI.
+    aether_control: >-
+      freeze_terms() raises ReviewRequired while any extracted field awaits a
+      human; the API returns 409 REVIEW_REQUIRED.
+    implementation:
+      - backend/aether/agents/review.py (freeze_terms)
+      - backend/aether/api/main.py (freeze endpoint)
+    evidence:
+      - backend/tests/unit/test_api.py::test_freeze_is_refused_while_review_is_pending
+      - backend/tests/unit/test_legal_clause_agent.py
+      - backend/tests/test_vertical_slice.py::test_terms_freeze_only_after_review
+    status: IMPLEMENTED
+    gap: null
+    responsible_owner: TBD - legal operations
+    testing_frequency: every commit
+
+  - id: AE-HS-02
+    requirement: >-
+      High-impact decisions require separation between the person who proposes
+      and the person who approves.
+    aether_control: >-
+      Maker-checker on identity; four eyes on material decisions; no approval
+      path at all under a hold.
+    implementation: backend/aether/governance/supervision.py
+    evidence:
+      - backend/tests/security/test_governance.py::TestMakerChecker
+      - "test_holding_both_roles_does_not_make_two_pairs_of_eyes"
+    status: ARCHITECTURALLY_PREPARED
+    gap: >-
+      Implemented and tested as a module. The approve endpoint still uses the
+      older single-signature path and still reads the acting role from the
+      request body, so the control is not yet in force.
+    responsible_owner: TBD - collateral operations
+    testing_frequency: every commit
+
+  - id: AE-RE-01
+    requirement: >-
+      Decisions attract scrutiny proportionate to their risk, under a policy the
+      institution can configure.
+    aether_control: Four-band classification driven by an injected policy object.
+    implementation: backend/aether/governance/escalation.py
+    evidence:
+      - backend/tests/security/test_governance.py::TestEscalation
+      - "test_thresholds_are_configurable_not_compiled_in"
+    status: IMPLEMENTED
+    gap: >-
+      DEFAULT_POLICY thresholds are demo values, flagged as such by
+      policy_is_demo on every assessment. An institution must supply its own.
+    responsible_owner: TBD - risk
+    testing_frequency: every commit
+
+  - id: AE-IR-01
+    requirement: >-
+      A compromised workflow must stop rather than continue silently, preserving
+      evidence and requiring human intervention.
+    aether_control: >-
+      Preflight integrity checks; blocking failures escalate to CRITICAL, which
+      has no approval path.
+    implementation: backend/aether/governance/integrity.py
+    evidence:
+      - backend/tests/security/test_governance.py::TestIntegrityPreflight
+      - "test_failures_feed_escalation_as_critical"
+    status: ARCHITECTURALLY_PREPARED
+    gap: >-
+      Implemented and tested. Not yet called from the run or approve endpoints,
+      so a run with a broken chain is not currently held.
+    responsible_owner: TBD - platform
+    testing_frequency: every commit
+
+  - id: AE-CL-01
+    requirement: >-
+      Material decisions carry a cryptographic lineage in which modification of a
+      prior record becomes detectable.
+    aether_control: >-
+      SHA-256 hash chain over canonical JSON; each event hashes its own content
+      plus its predecessor. Floats are refused at the hashing boundary.
+    implementation: backend/aether/core/audit.py
+    evidence:
+      - backend/tests/unit/test_pipeline.py::test_two_runs_produce_identical_audit_hashes
+      - backend/tests/security/test_governance.py::TestEvidencePack
+    status: IMPLEMENTED
+    gap: >-
+      Tamper-EVIDENT, not immutable. A single writer with store access can
+      rewrite the whole chain. Durable independent storage (append-only object
+      lock, or an external notary) is required to close that gap and is NOT
+      implemented. The chain is also recomputed per run rather than persisted.
+    responsible_owner: TBD - audit
+    testing_frequency: every commit
+
+  - id: AE-CL-02
+    requirement: >-
+      A supervisor must be able to reconstruct what happened, which model
+      produced it, which clause was used, who reviewed and approved it.
+    aether_control: Supervisory Evidence Pack, self-hashing, assembled not re-derived.
+    implementation: backend/aether/governance/evidence.py
+    evidence:
+      - backend/tests/security/test_governance.py::TestEvidencePack
+      - "test_pack_answers_all_seven_questions"
+    status: ARCHITECTURALLY_PREPARED
+    gap: >-
+      The builder is implemented and tested. No API endpoint exposes it and no UI
+      surfaces it, so a pack cannot currently be exported by a user.
+    responsible_owner: TBD - audit
+    testing_frequency: every commit
+
+  - id: AE-MD-01
+    requirement: >-
+      Every calculation identifies its market data source, and a live update must
+      not silently change a historical calculation.
+    aether_control: >-
+      Pinned snapshots loaded from versioned fixtures; snapshot_id, as_of and
+      engine_version stamped on every computed result; no calculation reads a
+      live feed.
+    implementation:
+      - backend/aether/core/market.py
+      - backend/aether/fixtures/loader.py
+      - backend/aether/api/serializers.py (reproducibility contract)
+    evidence:
+      - backend/tests/unit/test_api.py (provenance on every computed response)
+      - backend/tests/unit/test_pipeline.py::test_two_runs_produce_identical_audit_hashes
+    status: IMPLEMENTED
+    gap: >-
+      Snapshots carry an id and a date but not a content hash. A snapshot fixture
+      edited in place would not be detected by the run that reads it.
+    responsible_owner: TBD - market data
+    testing_frequency: every commit
+
+  - id: AE-CV-01
+    requirement: >-
+      CSA versions are immutable; a new version is compared against its
+      predecessor and material changes force review.
+    aether_control: >-
+      CSATerms is a frozen dataclass carrying terms_version; a frozen agreement
+      replaces the fixture for subsequent runs rather than editing it.
+    implementation: backend/aether/core/csa_terms.py
+    evidence: []
+    status: NOT_IMPLEMENTED
+    gap: >-
+      Immutability of a single version holds. Versioning does NOT: terms_version
+      is always 1, no diff between versions exists, no material-change detection
+      exists, and freezing a second agreement overwrites the first in the
+      in-process store rather than creating v2.
+    responsible_owner: TBD - legal operations
+    testing_frequency: not yet tested
+
+  - id: AE-ID-01
+    requirement: Permissions are enforced server-side under least privilege.
+    aether_control: Server-side role table mirrored from the frontend.
+    implementation: backend/aether/roles.py
+    evidence:
+      - backend/tests/unit/test_guide_agent.py (assistant tool permissions)
+    status: PARTIALLY_IMPLEMENTED
+    gap: >-
+      The table is enforced inside the guide agent's tools only. The resource
+      endpoints do not consult it, and the acting role arrives in the request
+      body rather than from a verified identity. There is no authentication:
+      any caller may assert any role.
+    responsible_owner: TBD - security
+    testing_frequency: every commit
+
+  - id: AE-TI-01
+    requirement: One institution cannot access another's data.
+    aether_control: None.
+    implementation: null
+    evidence: []
+    status: NOT_IMPLEMENTED
+    gap: >-
+      AETHER is single-tenant. There is no tenant identifier on any record, no
+      partition key, and no isolation boundary. Introducing one requires a tenant
+      dimension on every stored object and on every query, and must be done
+      before any second institution's data enters the system.
+    responsible_owner: TBD - platform
+    testing_frequency: not yet tested
+
+  - id: AE-MO-01
+    requirement: >-
+      AI behaviour is monitored: extraction accuracy, confidence distribution,
+      human override rate, rejected outputs, model version changes.
+    aether_control: Extraction evaluation harness against hand-authored ground truth.
+    implementation: backend/aether/agents/evaluation.py
+    evidence:
+      - backend/tests/unit/test_legal_clause_agent.py
+    status: PARTIALLY_IMPLEMENTED
+    gap: >-
+      Offline evaluation exists and is scored. Runtime monitoring does not: no
+      metric is emitted, no override rate is counted, no time series is retained.
+      Building the collection infrastructure is outstanding.
+    responsible_owner: TBD - model risk
+    testing_frequency: on model change
