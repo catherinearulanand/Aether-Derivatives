@@ -43,6 +43,12 @@ FUNCTION="${STACK}-api"
 ROLE="${STACK}-lambda-role"
 TABLE="catherine"
 RUNTIME="python3.13"
+# Reserved concurrency. Left unset, this function once sat at a reservation of 1,
+# which throttled the dashboard's parallel opening fetches — the run, the
+# comparison and the workflow all land at once — and surfaced in the browser as
+# a bare 503. Reserved concurrency is a ceiling, not a meter: it costs nothing on
+# its own, and capping it at 1 saved nothing while breaking the page.
+CONCURRENCY="${AETHER_LAMBDA_CONCURRENCY:-20}"
 BUILD="/d/aether-build"
 ZIP="${BUILD}/aether-lambda.zip"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -139,6 +145,15 @@ deploy_backend() {
   fi
   aws lambda wait function-updated --function-name "$FUNCTION" --region "$REGION"
 
+  # Set every time, because the failure mode is invisible from the outside: a
+  # throttled invocation never reaches the application, so nothing appears in the
+  # function's logs and the only evidence is the Throttles metric.
+  say "Setting reserved concurrency"
+  aws lambda put-function-concurrency --function-name "$FUNCTION" --region "$REGION" \
+    --reserved-concurrent-executions "$CONCURRENCY" \
+    --output text --query ReservedConcurrentExecutions >/dev/null
+  ok "reserved concurrency: ${CONCURRENCY}"
+
   # AWS_IAM, not NONE. The distribution signs requests with OAC; a Function URL
   # left open is a public, unauthenticated API, and this application has no
   # authentication of its own to fall back on.
@@ -156,7 +171,12 @@ deploy_backend() {
 # ---------------------------------------------------------------- frontend
 
 deploy_frontend() {
-  local bucket="${STACK}-web-$(account)"
+  # The deployed distribution's S3 origin is aether-site-<account>. This was
+  # ${STACK}-web-<account>, which matched nothing: the sync created a second,
+  # unreferenced bucket and reported success while the live site kept serving the
+  # previous upload. Changing this name without repointing the distribution's
+  # origin will reintroduce exactly that.
+  local bucket="${STACK}-site-$(account)"
 
   if aws s3api head-bucket --bucket "$bucket" 2>/dev/null; then
     ok "bucket $bucket exists"
