@@ -4,27 +4,39 @@ The FastAPI application is unchanged. Vercel's Python runtime speaks ASGI
 directly, so unlike the Lambda package there is no Mangum adapter here — the
 module simply has to expose ``app``.
 
-Layout matters. ``aether.config`` derives ``REPO_ROOT`` from ``__file__``'s
-grandparent and resolves ``fixtures/`` against it, so the deployed bundle must
-keep the repository shape: ``backend/aether/config.py`` two levels under the
-root, with ``fixtures/`` beside ``backend/``. ``vercel.json`` pulls both in
-through ``includeFiles``, because the application is reached by mutating
-``sys.path`` at runtime and fixtures are data — neither is visible to a static
-import tracer.
+WHY ``app`` IS A TOP-LEVEL ASSIGNMENT
 
-Routing. Every route on the app is declared under ``/api/v1``. The rewrite in
-``vercel.json`` sends ``/api/*`` here while preserving the original request
-path, so FastAPI matches on the URL the browser actually asked for.
+Vercel detects the entrypoint by statically scanning this file's top level for a
+name ``app``; it does not execute the module to find one. An earlier revision
+guarded the import with ``try``/``except`` and defined the fallback inside the
+handler — which left no ``app`` node at the top level, so detection failed and
+the build died in two seconds with "No FastAPI entrypoint found". The loading is
+therefore done in a function and bound here, where a scan can see it.
 
-WHY THE IMPORT IS GUARDED
+WHY THE IMPORT IS GUARDED AT ALL
 
-An exception raised while importing the application aborts the invocation
-before any handler exists, and the platform answers with a bare
+An exception raised while importing the application aborts the invocation before
+any handler exists, and the platform answers with a bare
 ``FUNCTION_INVOCATION_FAILED`` — no module name, no traceback, no way to tell a
-missing package from a missing file without dashboard access. The guard below
-converts that into a 500 whose body says what failed and what the bundle
-actually contains. It cannot mask a working deployment: it is reachable only
-when the import has already failed.
+missing package from a missing file without dashboard access. The guard converts
+that into a 500 whose body says what failed and what the bundle actually
+contains. It cannot mask a working deployment: it is reachable only once the
+import has already failed.
+
+LAYOUT
+
+``aether.config`` derives ``REPO_ROOT`` from ``__file__``'s grandparent and
+resolves ``fixtures/`` against it, so the bundle must keep the repository shape:
+``backend/aether/config.py`` two levels under the root, ``fixtures/`` beside
+``backend/``. ``vercel.json`` pulls both in through ``includeFiles``, because the
+application is reached by mutating ``sys.path`` at runtime and fixtures are data
+— neither is visible to a static import tracer.
+
+ROUTING
+
+Every route on the app is declared under ``/api/v1``. The rewrite in
+``vercel.json`` sends ``/api/*`` here while preserving the original request path,
+so FastAPI matches on the URL the browser actually asked for.
 """
 
 from __future__ import annotations
@@ -51,44 +63,51 @@ os.environ.setdefault("AETHER_USE_TRUSTSTORE", "false")
 os.environ.setdefault("AETHER_MODE", "replay")
 
 
+def _listing(path: Path, limit: int = 60) -> object:
+    try:
+        return sorted(p.name for p in path.iterdir())[:limit]
+    except OSError as exc:
+        return f"unreadable: {exc}"
+
+
+def _dependency_report() -> dict[str, str]:
+    """Import each runtime dependency alone, so a missing one is named rather than guessed."""
+    report: dict[str, str] = {}
+    for name in ("fastapi", "pydantic", "pydantic_settings", "numpy", "scipy", "pypdf"):
+        try:
+            module = __import__(name)
+        except BaseException as exc:  # noqa: BLE001
+            report[name] = f"{type(exc).__name__}: {exc}"
+        else:
+            report[name] = str(getattr(module, "__version__", "present"))
+    return report
+
+
 def _bundle_report() -> dict[str, object]:
     """What the function can actually see on disk, for diagnosing an import failure."""
-
-    def listing(path: Path, limit: int = 40) -> object:
-        try:
-            return sorted(p.name for p in path.iterdir())[:limit]
-        except OSError as exc:
-            return f"unreadable: {exc}"
-
     return {
         "python": sys.version,
         "cwd": os.getcwd(),
         "entrypoint": str(Path(__file__).resolve()),
         "root": str(ROOT),
-        "root_contents": listing(ROOT),
+        "root_contents": _listing(ROOT),
         "backend_exists": BACKEND.is_dir(),
-        "backend_contents": listing(BACKEND) if BACKEND.is_dir() else None,
-        "aether_package_exists": (BACKEND / "aether" / "__init__.py").is_file(),
+        "backend_contents": _listing(BACKEND) if BACKEND.is_dir() else None,
+        "aether_package": (BACKEND / "aether" / "__init__.py").is_file(),
         "fixtures_exists": (ROOT / "fixtures").is_dir(),
-        "fixtures_contents": listing(ROOT / "fixtures") if (ROOT / "fixtures").is_dir() else None,
+        "fixtures_contents": _listing(ROOT / "fixtures") if (ROOT / "fixtures").is_dir() else None,
+        "dependencies": _dependency_report(),
         "sys_path": sys.path[:12],
     }
 
 
-try:
-    from aether.api.main import app
-except BaseException:  # noqa: BLE001 - the report must survive any import failure
-    _FAILURE = {
-        "error": "AETHER failed to import inside the Vercel function.",
-        "traceback": traceback.format_exc().splitlines(),
-        "bundle": _bundle_report(),
-    }
+def _diagnostic_app(failure: dict[str, object]):
+    """A minimal ASGI app that reports why the real one could not be imported."""
 
-    async def app(scope, receive, send):  # type: ignore[misc]
-        """Minimal ASGI app that reports why the real one could not be imported."""
+    async def report(scope, receive, send):
         if scope["type"] != "http":
             return
-        body = json.dumps(_FAILURE, indent=2, default=str).encode()
+        payload = json.dumps(failure, indent=2, default=str).encode()
         await send(
             {
                 "type": "http.response.start",
@@ -99,7 +118,25 @@ except BaseException:  # noqa: BLE001 - the report must survive any import failu
                 ],
             }
         )
-        await send({"type": "http.response.body", "body": body})
+        await send({"type": "http.response.body", "body": payload})
 
+    return report
+
+
+def _load_application():
+    try:
+        from aether.api.main import app as application
+    except BaseException:  # noqa: BLE001 - the report must survive any import failure
+        return _diagnostic_app(
+            {
+                "error": "AETHER failed to import inside the Vercel function.",
+                "traceback": traceback.format_exc().splitlines(),
+                "bundle": _bundle_report(),
+            }
+        )
+    return application
+
+
+app = _load_application()
 
 __all__ = ["app"]
