@@ -20,6 +20,45 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import type { Role } from "./roles";
 import { ROLE_PROFILES } from "./roles";
 
+/**
+ * The scenarios in the order their snapshots are dated.
+ *
+ * ``GET /api/v1/comparison/{before}/{after}`` returns 422 when ``before`` is dated
+ * after ``after`` — a before/after comparison has to run forwards in time. Selection
+ * therefore has to preserve this ordering. Swapping the pair, which is what this
+ * store used to do when the two collided, produces a valid-looking selection that
+ * the API rejects: choosing the quiet market as the current snapshot moved the rate
+ * shock into the baseline and asked for 17 August → 14 August.
+ */
+const CHRONOLOGY = ["base", "stress", "crash"] as const;
+
+const position = (key: string): number => (CHRONOLOGY as readonly string[]).indexOf(key);
+
+/**
+ * A baseline that is strictly earlier than ``current``.
+ *
+ * Keeps the caller's preference when it already is. Otherwise steps back one
+ * snapshot — and when ``current`` is the earliest there is, returns ``current``
+ * itself, which makes the pair identical and leaves the comparison panel in its
+ * "choose a different baseline" state rather than in an error.
+ */
+function earlierThan(current: string, preferred: string): string {
+  const c = position(current);
+  const p = position(preferred);
+  if (c < 0 || p < 0) return preferred;
+  if (p < c) return preferred;
+  return c > 0 ? CHRONOLOGY[c - 1] : current;
+}
+
+/** The mirror of {@link earlierThan}: a current snapshot strictly later than the baseline. */
+function laterThan(baseline: string, preferred: string): string {
+  const b = position(baseline);
+  const p = position(preferred);
+  if (b < 0 || p < 0) return preferred;
+  if (p > b) return preferred;
+  return b < CHRONOLOGY.length - 1 ? CHRONOLOGY[b + 1] : baseline;
+}
+
 export interface Session {
   role: Role | null;
   /** The signed-in identity, recorded as the actor on any action taken. */
@@ -61,22 +100,21 @@ export const useAether = create<AetherState>()(
 
       signOut: () => set({ role: null, identity: null, signedInAt: null }),
 
+      // Comparing a snapshot with itself reports twelve zeroes and teaches
+      // nothing, so a collision moves the other selection out of the way — but
+      // backwards in time, never forwards, so the pair stays one the comparison
+      // endpoint will accept.
       setCurrent: (key) =>
-        set((state) =>
-          // Comparing a snapshot with itself reports twelve zeroes and teaches
-          // nothing, so selecting the current baseline as the current scenario
-          // steps the baseline out of the way.
-          key === state.baselineKey
-            ? { currentKey: key, baselineKey: state.currentKey }
-            : { currentKey: key },
-        ),
+        set((state) => ({
+          currentKey: key,
+          baselineKey: earlierThan(key, state.baselineKey),
+        })),
 
       setBaseline: (key) =>
-        set((state) =>
-          key === state.currentKey
-            ? { baselineKey: key, currentKey: state.baselineKey }
-            : { baselineKey: key },
-        ),
+        set((state) => ({
+          baselineKey: key,
+          currentKey: laterThan(key, state.currentKey),
+        })),
     }),
     {
       name: "aether.session",
@@ -90,6 +128,16 @@ export const useAether = create<AetherState>()(
         baselineKey: state.baselineKey,
         currentKey: state.currentKey,
       }),
+      // A session stored before the ordering rule existed can hold a pair that runs
+      // backwards, and rehydrating it would reproduce the 422 on the next load. The
+      // pair is therefore repaired on the way in rather than only on selection.
+      merge: (persisted, current) => {
+        const merged = { ...current, ...(persisted as Partial<AetherState>) };
+        return {
+          ...merged,
+          baselineKey: earlierThan(merged.currentKey, merged.baselineKey),
+        };
+      },
     },
   ),
 );

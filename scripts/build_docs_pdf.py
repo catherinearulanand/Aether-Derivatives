@@ -49,6 +49,12 @@ DOCUMENTS = [
         "AETHER-Test-Strategy",
         "What gets tested in the vertical slice, and what deliberately does not.",
     ),
+    (
+        "backend-and-agents.md",
+        "AETHER-Backend-and-Agents",
+        "The backend stack, the AWS services by the moment each one acts, "
+        "and each agent's tools and routing conditions.",
+    ),
 ]
 
 STYLESHEET = """

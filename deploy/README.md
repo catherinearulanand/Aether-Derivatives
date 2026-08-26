@@ -57,9 +57,18 @@ first — the reasons are written at the top of that script. The two that matter
 - **`anthropic` is imported lazily** inside `legal_clause.extract_terms` and
   `agents.guide`, and reached only in live mode.
 
-**Consequence, stated plainly: this package cannot serve `AETHER_MODE=live`.** Setting
-that variable on the deployed function raises `ModuleNotFoundError` at the first
-extraction. Replay is the demo path and the only mode this artifact supports.
+**Consequence, stated plainly: this package cannot serve `AETHER_MODE=live` — and it
+will not tell you so.** Both live paths are defensive. `extract_terms` converts the
+missing import into an `ExtractionError` and falls back to the cached extraction, and
+`guide.answer` catches any exception and falls back to the keyword router with
+`guard="MODEL_ERROR"`. Setting `AETHER_MODE=live` on the deployed function therefore
+produces no crash and no error response: it goes on serving replay while its
+environment claims otherwise.
+
+Those fallbacks are right for a demo, which should degrade rather than fail. They are
+wrong for diagnosis. If live is ever wanted here, add `anthropic` to
+`RUNTIME_REQUIREMENTS` — do not infer from a working endpoint that live is running.
+`GET /api/v1/health` reports `live_available`, and that is the field to check.
 
 Two builds of the same inputs produce a **byte-identical** archive — entries are written
 in sorted order with a pinned timestamp, and pip's generated console-script launchers,

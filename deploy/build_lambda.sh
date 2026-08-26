@@ -88,10 +88,14 @@ warn() { printf '  \033[33m!\033[0m %s\n' "$*"; }
 #                     and replay makes no outbound call.
 #   pytest/hypothesis/httpx/faker/pandas   development and fixture generation.
 #
-# CONSEQUENCE, STATED PLAINLY: this package cannot serve AETHER_MODE=live.
-# Setting that environment variable on the deployed function raises
-# ModuleNotFoundError on the first extraction. Replay is the demo path and the
-# only mode this artifact supports. Add "anthropic" below to change that.
+# CONSEQUENCE, STATED PLAINLY: this package cannot serve AETHER_MODE=live, and it
+# does not announce that. Both live paths are defensive — extract_terms turns the
+# missing import into an ExtractionError and falls back to the cached extraction,
+# and guide.answer catches any exception and falls back to the keyword router. So
+# setting AETHER_MODE=live here raises nothing and returns no error: the function
+# keeps serving replay while its environment claims otherwise. Check
+# `live_available` on /api/v1/health rather than inferring live from a 200.
+# Add "anthropic" below to actually support it.
 RUNTIME_REQUIREMENTS=(
   "fastapi>=0.141.1"
   "mangum>=0.19.0"
