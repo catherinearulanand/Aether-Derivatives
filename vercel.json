@@ -8,10 +8,6 @@
     "api/index.py": {
       "maxDuration": 60,
       "includeFiles": "**"
-    },
-    "api/ping.py": {
-      "maxDuration": 60,
-      "includeFiles": "**"
     }
   },
   "rewrites": [

@@ -27,6 +27,7 @@ comes into play.
 
 | | |
 |---|---|
+| URL | https://aether-derivatives.vercel.app |
 | Config | `vercel.json` at the repository root |
 | Function | `api/index.py` — ASGI, no adapter |
 | Dependencies | `requirements.txt` at the repository root |
@@ -84,7 +85,10 @@ production branch redeploys.
 4. No environment variables are required. `AETHER_MODE` and `AETHER_USE_TRUSTSTORE`
    are set in `api/index.py` with `setdefault`, so a dashboard variable still wins if
    one is ever added.
-5. Deploy.
+5. **Clear every environment variable Vercel offers to create.** The import flow
+   reads `.env.example` and pre-creates each key it declares, blank. See below —
+   this cost several deployments.
+6. Deploy.
 
 ---
 
@@ -108,6 +112,73 @@ for i in 1 2 3 4 5 6 7 8; do
       https://<deployment>/api/v1/scenarios/stress/run ) &
 done; wait; echo
 ```
+
+---
+
+## Blank environment variables killed this deployment
+
+Recorded because the failure was expensive to find and gives no clue on its own.
+
+Vercel creates project environment variables from `.env.example` during import,
+**blank** when they are not filled in. Every `AETHER_*` key therefore arrived
+*present and empty*, and `Settings()` rejected `''` for the mode enum and the
+truststore boolean. That happens at module import, before any handler exists, so
+the platform could only answer `FUNCTION_INVOCATION_FAILED` — no module name, no
+traceback, and nothing in the response to distinguish it from a missing package
+or a broken bundle.
+
+Two properties made it hard:
+
+- **`os.environ.setdefault` does not help.** It fills an *absent* key. These keys
+  were present and empty, so the entrypoint's defaults never applied.
+- **The string-typed settings did not fail.** They accepted `''` silently. Had
+  only `mode` and `use_truststore` been fixed, `engine_version` would have
+  shipped empty — and it is part of the reproducibility block on every response
+  carrying a computed number.
+
+`Settings` now sets `env_ignore_empty`, so an empty variable means unset for
+every field. `backend/tests/unit/test_config.py` covers the exact shape the
+platform created and fails without the fix.
+
+**What to do about the variables themselves:** delete them in Settings →
+Environment Variables. The code no longer needs them gone, but leaving blanks
+misrepresents the deployment's configuration to anyone reading it.
+
+### Diagnosing this class of failure again
+
+`FUNCTION_INVOCATION_FAILED` means the function died before serving anything.
+`api/index.py` therefore guards its import and, on failure, serves a 500 whose
+body carries the traceback and a report of what the bundle contains — which is
+how this cause was finally identified. Two constraints on that guard:
+
+- **`app` must be a top-level assignment.** Vercel finds the entrypoint by
+  statically scanning the file's top level for the name; it does not execute the
+  module. An earlier revision put the import inside `try`/`except` with the
+  fallback defined in the handler, leaving no top-level `app`, and the build
+  failed in two seconds with "No FastAPI entrypoint found" — while production
+  stayed silently pinned to the previous deployment, so the same stale error kept
+  being served.
+- **A `Redeploy` re-runs the pinned source commit**, not the branch head. Fixing
+  a build failure requires a new push.
+
+---
+
+## Verified on the live deployment
+
+```
+GET  /api/v1/health              200      128 B
+GET  /api/v1/methodology         200    2,528 B
+GET  /api/v1/scenarios           200      842 B
+POST /api/v1/scenarios/base/run  200   31,633 B
+POST /api/v1/scenarios/stress/run 200  60,611 B
+POST /api/v1/scenarios/crash/run 200   35,997 B
+GET  /api/v1/comparison/base/stress 200 8,969 B
+8 concurrent stress runs         200 x 8
+```
+
+Two live stress runs are byte-identical apart from `timing.elapsed_ms`, which is
+a wall-clock measurement — every computed figure and the whole audit chain
+reproduce.
 
 ---
 
