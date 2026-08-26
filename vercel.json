@@ -7,10 +7,13 @@
   "functions": {
     "api/index.py": {
       "maxDuration": 60,
-      "includeFiles": "fixtures/**"
+      "includeFiles": "{backend,fixtures}/**"
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index" }
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index"
+    }
   ]
 }

@@ -46,15 +46,28 @@ function serves the request, not the URL the function observes — the app still
 `/api/v1/health`, which is what its routes are declared as. Nothing re-prefixes or
 strips a path anywhere.
 
-### Why fixtures need `includeFiles`
+### Why `includeFiles` covers both `backend` and `fixtures`
 
-`aether.config.REPO_ROOT` is `__file__`'s grandparent, and `fixtures/` resolves
-against it. The bundle therefore has to keep the repository shape:
-`backend/aether/config.py` two levels under the root, `fixtures/` beside `backend/`.
-Fixtures are data and nothing imports them, so Vercel's dependency tracer cannot see
-them — `functions["api/index.py"].includeFiles` puts them in. Flattening the tree or
-dropping that key breaks fixture loading silently: the import succeeds and the first
-data read fails.
+Vercel bundles a function from the entrypoint plus the imports it can trace
+statically. Neither half of this application is reachable that way:
+
+- **`backend/**`** is imported only after `api/index.py` mutates `sys.path` at
+  runtime. A static tracer cannot follow that, so without this glob the bundle
+  ships no `aether` package at all and the function dies at import with
+  `ModuleNotFoundError`, surfacing as an opaque `FUNCTION_INVOCATION_FAILED` on
+  every route including `/api/v1/health`.
+- **`fixtures/**`** is data. Nothing imports it, so nothing can trace it.
+
+The bundle also has to keep the repository shape, because
+`aether.config.REPO_ROOT` is `__file__`'s grandparent and `fixtures/` resolves
+against it: `backend/aether/config.py` two levels under the root, `fixtures/`
+beside `backend/`. Flattening the tree breaks fixture loading silently — the
+import succeeds and the first data read fails.
+
+The two failures look nothing alike. A missing `backend` fails every route at
+import; a missing `fixtures` leaves `/api/v1/health` returning 200 and breaks the
+first route that reads data. `health` is therefore not a sufficient check on its
+own — run a scenario.
 
 ---
 
