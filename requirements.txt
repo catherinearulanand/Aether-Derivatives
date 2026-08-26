@@ -1,0 +1,34 @@
+# Vercel's Python runtime installs from this file. It is the *runtime* set, not
+# the development set, and it deliberately mirrors RUNTIME_REQUIREMENTS in
+# deploy/build_lambda.sh — the two deployments must serve the same code with the
+# same dependencies, or a bug reproduced on one proves nothing about the other.
+#
+# pyproject.toml remains the source of truth for local development. This file
+# exists because Vercel does not read it, and because letting it resolve the
+# full dependency set would install packages the deployed function never
+# imports, against a 250 MB unzipped bundle limit that numpy and scipy already
+# consume most of.
+#
+# Excluded, each verified against the source rather than assumed:
+#
+#   mangum            the Lambda ASGI adapter. Vercel speaks ASGI natively.
+#   uvicorn           an ASGI *server*; nothing imports it outside scripts/dev.ps1.
+#   sqlmodel          declared in pyproject and imported nowhere. Drags in SQLAlchemy.
+#   python-multipart  form uploads only; the API has no UploadFile endpoint.
+#   anthropic         imported lazily in legal_clause.extract_terms and agents.guide,
+#                     and reached only in live mode.
+#   truststore        lazy and guarded by AETHER_USE_TRUSTSTORE, which api/index.py
+#                     sets false.
+#   certifi           never imported by aether; replay makes no outbound call.
+#
+# CONSEQUENCE, STATED PLAINLY: as with the Lambda package, this cannot serve
+# AETHER_MODE=live and will not announce that. Both live paths are defensive and
+# fall back to replay silently. Check `live_available` on /api/v1/health rather
+# than inferring live from a 200. To actually support live, add anthropic below.
+
+fastapi>=0.141.1
+pydantic>=2.12.5
+pydantic-settings>=2.13.1
+numpy>=2.4.3
+scipy>=1.18.0
+pypdf>=6.16.1

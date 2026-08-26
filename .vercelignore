@@ -1,0 +1,19 @@
+# Trimmed from the deployment upload. Nothing here is read at runtime: the only
+# path the API resolves against REPO_ROOT is fixtures/, and the frontend build
+# reads nothing outside frontend/.
+.git
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.hypothesis
+.ruff_cache
+.mypy_cache
+backend/tests
+frontend/node_modules
+frontend/.next
+frontend/out
+docs
+presentation
+deploy
