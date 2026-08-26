@@ -50,7 +50,7 @@ def _dependencies() -> dict[str, str]:
     for name in ("fastapi", "pydantic", "pydantic_settings", "numpy", "scipy", "pypdf"):
         try:
             module = __import__(name)
-        except BaseException as exc:  # noqa: BLE001
+        except BaseException as exc:
             report[name] = f"{type(exc).__name__}: {exc}"
         else:
             report[name] = str(getattr(module, "__version__", "present"))
@@ -64,8 +64,8 @@ def _import_aether() -> object:
     os.environ.setdefault("AETHER_USE_TRUSTSTORE", "false")
     os.environ.setdefault("AETHER_MODE", "replay")
     try:
-        from aether.api.main import app as application
-    except BaseException:  # noqa: BLE001
+        from aether.api.main import app as application  # noqa: PLC0415
+    except BaseException:
         return {"ok": False, "traceback": traceback.format_exc().splitlines()}
     return {"ok": True, "routes": len(getattr(application, "routes", []))}
 
@@ -95,7 +95,7 @@ async def _probe(scope, receive, send):
         return
     try:
         payload = json.dumps(_report(), indent=2, default=str).encode()
-    except BaseException:  # noqa: BLE001
+    except BaseException:
         payload = json.dumps({"report_failed": traceback.format_exc().splitlines()}).encode()
     await send(
         {

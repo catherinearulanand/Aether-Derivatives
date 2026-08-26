@@ -52,15 +52,28 @@ BACKEND = ROOT / "backend"
 if str(BACKEND) not in sys.path:
     sys.path.insert(0, str(BACKEND))
 
+def _default(name: str, value: str) -> None:
+    """Set ``name`` unless the environment already gives it a non-empty value.
+
+    ``os.environ.setdefault`` is not enough. Vercel creates project variables
+    from ``.env.example`` with blank values, so these keys are *present and
+    empty* — setdefault leaves them, and ``Settings()`` then rejects '' for the
+    mode enum and the truststore boolean, killing the import. A dashboard value
+    that is actually set still wins.
+    """
+    if not os.environ.get(name):
+        os.environ[name] = value
+
+
 # truststore exists for the TLS interception on the development machine and is
 # not in requirements.txt. install_tls_trust already degrades to a no-op on
 # ImportError; setting this false skips the attempt rather than relying on the
-# rescue. setdefault, so a dashboard environment variable still wins.
-os.environ.setdefault("AETHER_USE_TRUSTSTORE", "false")
+# rescue.
+_default("AETHER_USE_TRUSTSTORE", "false")
 
 # Replay is the Settings default; stating it here makes the deployed mode
 # readable from the source rather than inferred from an absent variable.
-os.environ.setdefault("AETHER_MODE", "replay")
+_default("AETHER_MODE", "replay")
 
 
 def _listing(path: Path, limit: int = 60) -> object:
@@ -76,7 +89,7 @@ def _dependency_report() -> dict[str, str]:
     for name in ("fastapi", "pydantic", "pydantic_settings", "numpy", "scipy", "pypdf"):
         try:
             module = __import__(name)
-        except BaseException as exc:  # noqa: BLE001
+        except BaseException as exc:
             report[name] = f"{type(exc).__name__}: {exc}"
         else:
             report[name] = str(getattr(module, "__version__", "present"))
@@ -125,8 +138,8 @@ def _diagnostic_app(failure: dict[str, object]):
 
 def _load_application():
     try:
-        from aether.api.main import app as application
-    except BaseException:  # noqa: BLE001 - the report must survive any import failure
+        from aether.api.main import app as application  # noqa: PLC0415
+    except BaseException:  # the report must survive any import failure
         return _diagnostic_app(
             {
                 "error": "AETHER failed to import inside the Vercel function.",

@@ -31,6 +31,13 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        # An empty environment variable means "unset", not "the empty string".
+        # Deployment platforms create variables from .env.example with blank
+        # values, and without this every one of them overrides its default:
+        # mode and use_truststore fail validation outright, while engine_version
+        # and model_id silently become "" and travel into the reproducibility
+        # block of every response carrying a computed number.
+        env_ignore_empty=True,
     )
 
     mode: Mode = Mode.REPLAY
