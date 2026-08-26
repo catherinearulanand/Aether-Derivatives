@@ -48,24 +48,52 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     );
   }
 
+  // A Response body is a stream and can be consumed exactly once. Reading it as
+  // text first and parsing afterwards keeps the non-JSON case recoverable:
+  // calling .json() and falling back to .text() drains the stream on the failed
+  // parse, and the .text() then throws "body stream already read" — which
+  // replaces the real failure with a meaningless one. That is precisely the case
+  // that matters, because a request that never reaches the API comes back as the
+  // platform's HTML error page rather than as JSON.
+  const body = await response.text().catch(() => "");
+
   if (!response.ok) {
-    let detail: unknown;
+    let detail: unknown = body;
     try {
-      detail = (await response.json())?.detail;
+      detail = (JSON.parse(body) as { detail?: unknown }).detail ?? body;
     } catch {
-      detail = await response.text();
+      // Not JSON. The raw body is the best detail available.
     }
     throw new ApiError(describeError(response.status, detail), response.status, detail);
   }
 
-  return (await response.json()) as T;
+  try {
+    return JSON.parse(body) as T;
+  } catch {
+    throw new ApiError(
+      `The API returned ${response.status} with a body that is not JSON. The request was ` +
+        `most likely answered by the platform in front of the API rather than by the API.`,
+      response.status,
+      body.slice(0, 500),
+    );
+  }
 }
 
 function describeError(status: number, detail: unknown): string {
   if (detail && typeof detail === "object" && "message" in detail) {
     return String((detail as { message: unknown }).message);
   }
-  if (typeof detail === "string" && detail) return detail;
+  if (typeof detail === "string") {
+    const text = detail.trim();
+    // An API error is JSON. Anything else came from the platform in front of the
+    // API — an HTML 404 or 5xx page — and quoting its markup into the UI helps
+    // nobody. Say what the shape of the response implies instead.
+    if (text && !text.startsWith("<") && text.length <= 300) return text;
+    if (text) {
+      return `Request failed with status ${status}. The response was not JSON, which means ` +
+        `the request did not reach the API.`;
+    }
+  }
   return `Request failed with status ${status}.`;
 }
 
