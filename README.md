@@ -1,6 +1,6 @@
 # AETHER
 
-**Autonomous Margin & Collateral Intelligence** — a working prototype for the GIFT IFIH
+**Autonomous Margin & Collateral Intelligence** -- a working prototype for the GIFT IFIH
 Young Builders Program.
 
 An ISDA Credit Support Annex goes in. A cited, reviewed, deterministically-calculated
