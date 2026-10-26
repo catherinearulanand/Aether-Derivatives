@@ -5,7 +5,7 @@ Young Builders Program.
 
 An ISDA Credit Support Annex goes in. A cited, reviewed, deterministically-calculated
 margin call and an optimised collateral allocation come out, with a tamper-evident
-audit trail behind every figure. Any changes or errors can be traced back to the original document.
+audit trail behind every figure, each traceable to its source document.
 
 ```
 CSA document (markdown or native PDF)
@@ -34,7 +34,7 @@ integers, booleans and null, and a `Decimal` is rejected at construction.
 > ### Language models extract. Deterministic engines compute.
 
 A language model reads the Annex and produces *typed, cited, confidence-scored fields*.
-It never produces a margin number, only produces structured terms. Every contractual value crosses into the calculation
+It never produces a margin number; it only produces structured terms. Every contractual value crosses into the calculation
 engine exactly once — through a validated schema, carrying a quote from the source
 document, past a human confirmation when confidence is low.
 
